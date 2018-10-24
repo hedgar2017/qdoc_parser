@@ -1,0 +1,19 @@
+// Symbols
+symbol_begin = { "/*!" }
+symbol_end = { "*/" }
+symbol_command = { "\\" }
+
+// Words
+word = { (LETTER | NUMBER | PUNCTUATION | MARK | SYMBOL)+ }
+command = { symbol_command ~ LETTER+ }
+
+// Lines
+comment_begin = { SPACE_SEPARATOR* ~ symbol_begin ~ NEWLINE? }
+comment_line = { (SPACE_SEPARATOR* ~ !symbol_begin ~ (command | word))* ~ NEWLINE }
+comment_end = { SPACE_SEPARATOR* ~ symbol_end ~ NEWLINE }
+comment_singleline = { SPACE_SEPARATOR* ~ symbol_begin ~ (SPACE_SEPARATOR* ~ !symbol_end ~ (command | word))* ~ SPACE_SEPARATOR* ~ symbol_end ~ NEWLINE }
+other_line = { SPACE_SEPARATOR* ~ (!symbol_begin ~ (SPACE_SEPARATOR* ~ word))* ~ NEWLINE }
+
+// Sections
+comment_multiline = { comment_begin ~ (!comment_end ~ comment_line)* ~ comment_end }
+doc_file = { SOI ~ ((comment_singleline | comment_multiline) | (other_line))* ~ EOI }
