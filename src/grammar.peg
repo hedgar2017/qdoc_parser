@@ -1,19 +1,19 @@
 // Symbols
-symbol_begin = { "/*!" }
-symbol_end = { "*/" }
-symbol_command = { "\\" }
+symbol_comment_begin = { "/*!" } // QDoc comment begin symbol
+symbol_comment_end = { "*/" } // QDoc comment end symbol
+symbol_command_begin = { "\\" } // QDoc command symbol
 
 // Words
-word = { (LETTER | NUMBER | PUNCTUATION | MARK | SYMBOL)+ }
-command = { symbol_command ~ LETTER+ }
+word = { (LETTER | NUMBER | PUNCTUATION | MARK | SYMBOL)+ } // just a word with any symbols surrounded with spaces
+command = { symbol_command_begin ~ LETTER+ } // a QDoc command
 
 // Lines
-comment_begin = { SPACE_SEPARATOR* ~ symbol_begin ~ NEWLINE? }
-comment_line = { (SPACE_SEPARATOR* ~ !symbol_begin ~ (command | word))* ~ NEWLINE }
-comment_end = { SPACE_SEPARATOR* ~ symbol_end ~ NEWLINE }
-comment_singleline = { SPACE_SEPARATOR* ~ symbol_begin ~ (SPACE_SEPARATOR* ~ !symbol_end ~ (command | word))* ~ SPACE_SEPARATOR* ~ symbol_end ~ NEWLINE }
-other_line = { SPACE_SEPARATOR* ~ (!symbol_begin ~ (SPACE_SEPARATOR* ~ word))* ~ NEWLINE }
+comment_begin = { SPACE_SEPARATOR* ~ symbol_comment_begin ~ NEWLINE? } // sometimes comments start in the first line
+comment_line = { (SPACE_SEPARATOR* ~ !symbol_comment_begin ~ (command | word))* ~ NEWLINE } // inner comment lines always end with a newline
+comment_end = { SPACE_SEPARATOR* ~ symbol_comment_end ~ NEWLINE } // there is always a newline after the comment end symbol
+other_line = { SPACE_SEPARATOR* ~ (!symbol_comment_begin ~ (SPACE_SEPARATOR* ~ word))* ~ NEWLINE } // any other line not supposed to be processed
 
 // Sections
-comment_multiline = { comment_begin ~ (!comment_end ~ comment_line)* ~ comment_end }
-doc_file = { SOI ~ ((comment_singleline | comment_multiline) | (other_line))* ~ EOI }
+comment_singleline = { SPACE_SEPARATOR* ~ symbol_comment_begin ~ (SPACE_SEPARATOR* ~ !symbol_comment_end ~ (command | word))* ~ SPACE_SEPARATOR* ~ symbol_comment_end ~ NEWLINE } // e.g. '/* comment */'
+comment_multiline = { comment_begin ~ (!comment_end ~ comment_line)* ~ comment_end } // usual multiline comments
+doc_file = { SOI ~ (comment_singleline | comment_multiline | other_line)* ~ EOI } // a *.cpp file
