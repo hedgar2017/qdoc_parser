@@ -10,6 +10,7 @@ use std::fmt;
 /// translation to rustdoc and the name of the C++ function if
 /// it is attached to one.
 ///
+#[derive(Debug)]
 pub struct QDocEntry {
     /// If this is set it means that the doc entry is atteached to a cpp function
     pub target_cpp_function: Option<String>,
@@ -22,11 +23,11 @@ pub struct QDocEntry {
 impl fmt::Display for QDocEntry {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "QDoc original text:");
-        for line in self.qdoc_text.trim().lines() {
+        for line in self.qdoc_text.lines() {
             writeln!(f, "{}", line)?;
         }
         writeln!(f, "Rustdoc translated text:");
-        for line in self.rustdoc_text.trim().lines() {
+        for line in self.rustdoc_text.lines() {
             writeln!(f, "{}", line)?;
         }
         Ok(())

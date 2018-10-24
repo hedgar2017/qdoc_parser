@@ -1,15 +1,19 @@
+mod file;
 mod entry;
 
 extern crate pest;
 #[macro_use]
 extern crate pest_derive;
+extern crate rayon;
 #[macro_use]
 extern crate failure;
 
 use std::{collections::HashMap, fs, io};
 
 use pest::Parser;
+use rayon::prelude::*;
 
+use file::QDocFile;
 use entry::QDocEntry;
 
 #[derive(Parser)]
@@ -32,7 +36,7 @@ impl From<io::Error> for Error {
     }
 }
 
-type QDocResult = Result<Vec<QDocEntry>, Error>;
+type QDocResult = Result<QDocFile, Error>;
 
 impl QDocParser {
     /// This is the main entry function that does all the work.
@@ -48,7 +52,7 @@ impl QDocParser {
     ///
     pub fn parse_files(paths: Vec<&str>) -> HashMap<String, QDocResult> {
         paths
-            .iter()
+            .par_iter()
             .map(|path| (path.to_string(), Self::parse_file(path)))
             .collect::<HashMap<String, QDocResult>>()
     }
@@ -70,7 +74,7 @@ impl QDocParser {
             match record.as_rule() {
                 Rule::comment_singleline => (),
                 Rule::comment_multiline => {
-                    let qdoc_text = record.as_span().as_str().to_owned();
+                    let qdoc_text = record.as_span().as_str().trim().to_owned();
 
                     let mut rustdoc_lines = Vec::with_capacity(64);
                     for line in record.into_inner() {
@@ -81,7 +85,7 @@ impl QDocParser {
                             _ => (),
                         }
                     }
-                    let rustdoc_text = rustdoc_lines.join("\n");
+                    let rustdoc_text = rustdoc_lines.join("\n").trim().to_owned();
 
                     entries.push(QDocEntry {
                         target_cpp_function: None,
@@ -92,6 +96,6 @@ impl QDocParser {
                 _ => (),
             };
         }
-        Ok(entries)
+        Ok(QDocFile(entries))
     }
 }
