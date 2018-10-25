@@ -1,0 +1,19 @@
+// Symbols
+space = { SPACE_SEPARATOR | "\t" } // C++ whitespace - either space or tab
+printable = { space* ~ !(NEWLINE | space) ~ ANY ~ space* } // any visible symbol
+symbol_comment_begin = { space* ~ "/*!" ~ space* } // QDoc comment begin symbol
+symbol_comment_end = { space* ~ "*/" ~ space* } // QDoc comment end symbol
+
+// Words
+word = { printable+ } // just a word with any symbols except the comment end surrounded with spaces
+comment_word = { (!symbol_comment_end ~ printable)+ } // may be the last word of a comment, so must be separated from the end symbol
+
+// Lines
+comment_line = { (!symbol_comment_end ~ comment_word)* } // some words inside a comment
+other_line = { space* ~ (!symbol_comment_begin ~ word)* } // any other line not supposed to be processed
+function_line = { !symbol_comment_begin ~ (!NEWLINE ~ !"(" ~ (printable | " "))* ~ "(" ~ (!")" ~ (printable | " " | NEWLINE))* ~ ")" ~ ("const" | "volatile")* }
+
+// Sections
+comment_singleline = { symbol_comment_begin ~ comment_line ~ symbol_comment_end } // e.g. '/*! comment */'
+comment_multiline = { symbol_comment_begin ~ NEWLINE? ~ (!symbol_comment_end ~ comment_line ~ NEWLINE?)* ~ symbol_comment_end } // usual multiline comments
+doc_file = { SOI ~ ((comment_singleline | comment_multiline | other_line) ~ NEWLINE)* ~ EOI } // a *.cpp file

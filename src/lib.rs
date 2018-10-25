@@ -1,5 +1,6 @@
-mod file;
 mod entry;
+mod error;
+mod file;
 
 extern crate pest;
 #[macro_use]
@@ -8,33 +9,18 @@ extern crate rayon;
 #[macro_use]
 extern crate failure;
 
-use std::{collections::HashMap, fs, io};
+use std::{collections::HashMap, fs};
 
 use pest::Parser;
 use rayon::prelude::*;
 
-use file::QDocFile;
 use entry::QDocEntry;
+use error::Error;
+use file::QDocFile;
 
 #[derive(Parser)]
-#[grammar = "grammar.peg"]
+#[grammar = "../peg/qdoc.peg"]
 pub struct QDocParser;
-
-#[derive(Debug, Fail)]
-pub enum Error {
-    #[fail(display = "File reading error: {}", _0)]
-    Read(io::Error),
-    #[fail(display = "File is empty")]
-    Empty,
-    #[fail(display = "File parsing error:\n{}", _0)]
-    Parse(String),
-}
-
-impl From<io::Error> for Error {
-    fn from(error: io::Error) -> Self {
-        Error::Read(error)
-    }
-}
 
 type QDocResult = Result<QDocFile, Error>;
 
@@ -60,35 +46,59 @@ impl QDocParser {
     fn parse_file(path: &str) -> QDocResult {
         let data = fs::read_to_string(path)?;
         let data = match data.chars().last() {
-            None => return Err(Error::Empty),
+            None => return Ok(QDocFile(Vec::new())),
             Some('\n') => data,
             Some(_) => data + "\n",
         };
+
         let file = Self::parse(Rule::doc_file, &data)
             .map_err(|error| Error::Parse(error.to_string()))?
             .next()
             .unwrap()
             .into_inner();
         let mut entries = Vec::with_capacity(64);
+
         for record in file {
             match record.as_rule() {
-                Rule::comment_singleline => (),
-                Rule::comment_multiline => {
-                    let qdoc_text = record.as_span().as_str().trim().to_owned();
-
+                Rule::comment_singleline | Rule::comment_multiline => {
+                    let mut class_name = None;
+                    let mut target_cpp_function = None;
+                    let mut qdoc_lines = Vec::with_capacity(64);
                     let mut rustdoc_lines = Vec::with_capacity(64);
+
                     for line in record.into_inner() {
                         match line.as_rule() {
                             Rule::comment_line => {
-                                rustdoc_lines.push(format!("/// {}", line.as_span().as_str().trim()));
+                                let line_text = line.as_span().as_str().trim();
+                                let words = line
+                                    .into_inner()
+                                    .map(|pair| pair.as_span().as_str())
+                                    .collect::<Vec<&str>>();
+                                for i in 0..((words.len() as isize) - 1) {
+                                    let i = i as usize;
+                                    if words[i] == "\\class" {
+                                        class_name = Some(words[i + 1].to_owned());
+                                    }
+                                }
+
+                                qdoc_lines.push(line_text.to_owned());
+                                rustdoc_lines.push(line_text.to_owned());
+                            }
+                            Rule::function_line => {
+                                if class_name.is_none() {
+                                    target_cpp_function =
+                                        Some(line.as_span().as_str().trim().to_owned());
+                                }
                             }
                             _ => (),
                         }
                     }
+                    let qdoc_text = qdoc_lines.join("\n").trim().to_owned();
                     let rustdoc_text = rustdoc_lines.join("\n").trim().to_owned();
 
                     entries.push(QDocEntry {
-                        target_cpp_function: None,
+                        class_name,
+                        target_cpp_function,
                         qdoc_text,
                         rustdoc_text,
                     });
