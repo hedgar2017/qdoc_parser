@@ -1,5 +1,5 @@
-mod entry;
 mod error;
+mod entry;
 mod file;
 
 extern crate pest;
@@ -14,15 +14,15 @@ use std::{collections::HashMap, fs};
 use pest::Parser;
 use rayon::prelude::*;
 
-use entry::QDocEntry;
 use error::Error;
+use entry::QDocEntry;
 use file::QDocFile;
+
+type QDocResult = Result<QDocFile, Error>;
 
 #[derive(Parser)]
 #[grammar = "../peg/qdoc.peg"]
 pub struct QDocParser;
-
-type QDocResult = Result<QDocFile, Error>;
 
 impl QDocParser {
     /// This is the main entry function that does all the work.
@@ -60,55 +60,81 @@ impl QDocParser {
 
         for record in file {
             match record.as_rule() {
-                Rule::doc_singleline | Rule::doc_multiline => {
-                    let mut class_name = None;
-                    let mut target_cpp_function = None;
-                    let mut qdoc_lines = Vec::with_capacity(64);
+                Rule::doc_entry => {
+                    let mut class = None;
+                    let mut brief = None;
+                    let mut function = None;
+
+                    let qdoc_text = record.as_span().as_str().to_owned();
                     let mut rustdoc_lines = Vec::with_capacity(64);
 
-                    for line in record.into_inner() {
-                        match line.as_rule() {
-                            Rule::doc_line => {
-                                let line_text = line.as_span().as_str().trim();
-                                qdoc_lines.push(line_text);
-
-                                let words = line
-                                    .into_inner()
-                                    .map(|pair| pair.as_span().as_str().trim())
-                                    .collect::<Vec<&str>>();
-                                class_name = class_name.or(Self::check_for_class(&words));
-                                rustdoc_lines.push(line_text);
+                    for element in record.into_inner() {
+                        match element.as_rule() {
+                            Rule::doc_word => {
+                                let text = element.as_span().as_str();
+                                rustdoc_lines.push(format!("{} ", text));
                             }
+                            Rule::command => {
+                                let command = element.into_inner().next().unwrap();
+                                println!("Command: {}", command.as_span().as_str());
+                                match command.as_rule() {
+                                    Rule::cmd_a => {
+                                        let text = command.as_span().as_str().trim();
+                                        rustdoc_lines.push(format!("*{}*", text));
+                                    },
+                                    Rule::cmd_b | Rule::cmd_gui => {
+                                        let text = command.as_span().as_str().trim();
+                                        rustdoc_lines.push(format!("**{}**", text));
+                                    },
+                                    Rule::cmd_brief => {
+                                        brief = Some(command.as_span().as_str().trim().to_owned());
+                                    },
+                                    Rule::cmd_c | Rule::cmd_code | Rule::cmd_codeline => {
+                                        let text = command.as_span().as_str().trim();
+                                        rustdoc_lines.push(format!("`{}`", text));
+                                    },
+                                    Rule::cmd_class => {
+                                        class = Some(command.as_span().as_str().trim().to_owned());
+                                    },
+                                    Rule::cmd_dots => {
+                                        rustdoc_lines.push(format!("..."));
+                                    },
+                                    Rule::cmd_e => {
+                                        let text = command.as_span().as_str().trim();
+                                        rustdoc_lines.push(format!("*{}*", text));
+                                    },
+                                    Rule::cmd_fn => {
+                                        function = Some(command.as_span().as_str().trim().to_owned());
+                                    },
+                                    _ => (),
+                                }
+                            }
+                            Rule::newline => rustdoc_lines.push("\n".to_string()),
                             Rule::function_line => {
-                                if class_name.is_none() {
-                                    target_cpp_function =
-                                        Some(line.as_span().as_str().trim().to_owned());
+                                if class.is_none() && function.is_none() {
+                                    function =
+                                        Some(element.as_span().as_str().trim().to_owned());
                                 }
                             }
                             _ => (),
                         }
                     }
 
+                    for (i, v) in rustdoc_lines.iter().enumerate() {
+                        println!("{}: {}", i, v);
+                    }
+
                     entries.push(QDocEntry {
-                        class_name,
-                        target_cpp_function,
-                        qdoc_text: qdoc_lines.join("\n").trim().to_owned(),
-                        rustdoc_text: rustdoc_lines.join("\n").trim().to_owned(),
+                        class,
+                        brief,
+                        function,
+                        qdoc_text,
+                        rustdoc_text: rustdoc_lines.join("").to_owned(),
                     });
                 }
                 _ => (),
             };
         }
         Ok(QDocFile(entries))
-    }
-
-    fn check_for_class(words: &[&str]) -> Option<String> {
-        if words.len() < 2 {
-            return None;
-        }
-        if words[0] == "\\class" {
-            return Some(words[1..].join(" "));
-        }
-        None
     }
 }

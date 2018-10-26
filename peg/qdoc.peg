@@ -1,24 +1,62 @@
 // Symbols
-space = _{ SPACE_SEPARATOR | "\t" } // C++ whitespace - either space or tab
-printable = { !(NEWLINE | space) ~ ANY } // any visible symbol
-doc_begin = { space* ~ "/*!" ~ space* } // QDoc begin symbol
-doc_end = { space* ~ "*/" ~ space* } // QDoc end symbol
+printable = { !WHITE_SPACE ~ ANY } // any visible symbol
+doc_begin = { "/*!" } // QDoc begin symbol
+doc_end = { "*/" } // QDoc end symbol
 function_begin = { "(" } // function declaration begin signatures
 function_end = { "{" | ";" | ": " } // function declaration end signatures
-function_symbol = { !(function_end | "#") ~ (space | ANY) } // not a function declaration end signature
+function_symbol = { !(function_end | "#") ~ ANY } // not a function declaration end signature
 
 // Words
-word = { space* ~ printable+ ~ space* } // just a word with any symbols except the 'doc end' surrounded with spaces
-doc_word = { space* ~ (!doc_end ~ printable)+ ~ space* } // may be the last word of a doc, so must be separated from the end symbol
+newline = { SPACE_SEPARATOR* ~ NEWLINE }
+other_word = { WHITE_SPACE* ~ (!doc_begin ~ printable)+ ~ WHITE_SPACE* } // any other word not supposed to be processed
+word = { WHITE_SPACE* ~ printable+ ~ WHITE_SPACE* } // just a word with any symbols
+doc_word = { (!doc_end ~ printable)+ } // may be the last word of a doc, so must be separated from the end symbol
+
+// Commands (visible parts)
+cmd_a = { doc_word }
+cmd_b = { (!"}" ~ ANY)* }
+cmd_brief = { (!"." ~ ANY)* }
+cmd_c = { SPACE_SEPARATOR* ~ printable+ }
+cmd_class = { SPACE_SEPARATOR* ~ printable+ }
+cmd_code = { (!"\\endcode" ~ ANY)* }
+cmd_codeline = { (!newline ~ ANY)* }
+cmd_dots = { "\\dots" }
+cmd_e = { (!"}" ~ ANY)* }
+cmd_fn = { (!newline ~ ANY)* }
+cmd_gui = { (!"}" ~ ANY)* }
+// ignored
+cmd_badcode = { (!"\\endcode" ~ ANY)* }
+cmd_deprecated = { (!newline ~ ANY)* }
+cmd_div = { (!"\\enddiv" ~ ANY)* }
+cmd_include = { (!newline ~ ANY)* }
+cmd_index = { (!newline ~ ANY)* }
+
+command = {
+    ("\\a" ~ SPACE_SEPARATOR* ~ cmd_a) |
+    ("\\brief" ~ SPACE_SEPARATOR* ~ cmd_brief ~ "." ~ newline) |
+    ("\\b" ~ SPACE_SEPARATOR* ~ "{" ~ cmd_b ~ "}") |
+    ("\\class" ~ cmd_class ~ newline) |
+    ("\\codeline" ~ cmd_codeline ~ newline) |
+    ("\\code" ~ cmd_code ~ "\\endcode") |
+    ("\\c" ~ cmd_c) |
+    (cmd_dots) |
+    ("\\e" ~ SPACE_SEPARATOR* ~ "{" ~ cmd_e ~ "}") |
+    ("\\fn" ~ SPACE_SEPARATOR* ~ cmd_fn ~ newline) |
+    ("\\gui" ~ SPACE_SEPARATOR* ~ "{" ~ cmd_gui ~ "}") |
+
+    ("\\badcode" ~ cmd_badcode ~ "\\endcode") |
+    ("\\deprecated" ~ cmd_deprecated ~ newline) |
+    ("\\div" ~ cmd_div ~ "\\enddiv") |
+    ("\\include" ~ cmd_include ~ newline) |
+    ("\\index" ~ cmd_index ~ newline)
+}
 
 // Lines
-doc_line = { (!doc_end ~ doc_word)* } // some words inside a docs
-other_line = { space* ~ (!doc_begin ~ word)* } // any other line not supposed to be processed
-comment_singleline = { "//" ~ (!NEWLINE ~ ANY)* ~ NEWLINE} // a non-QDoc single-line comment
-comment_multiline = { "/*" ~ (!"*/" ~ ANY)* ~ "*/"} // a non-QDoc multi-line comment
+comment_singleline = { WHITE_SPACE* ~ "//" ~ (!NEWLINE ~ ANY)* ~ NEWLINE} // a non-QDoc single-line comment
+comment_multiline = { WHITE_SPACE* ~ "/*" ~ (!"*/" ~ ANY)* ~ "*/" ~ NEWLINE} // a non-QDoc multi-line comment
 function_line = { !doc_begin ~ (!function_begin ~ function_symbol)* ~ function_begin ~ function_symbol* ~ &function_end } // the C++ function declaration
 
 // Sections
-doc_singleline = { doc_begin ~ doc_line ~ doc_end ~ (NEWLINE | comment_singleline | comment_multiline)* ~ function_line? } // e.g. '/*! docs */'
-doc_multiline = { doc_begin ~ NEWLINE? ~ (!doc_end ~ doc_line ~ NEWLINE?)* ~ doc_end ~ (NEWLINE | comment_singleline | comment_multiline)* ~ function_line? } // usual multiline docs
-doc_file = { SOI ~ (doc_singleline | doc_multiline | (other_line ~ NEWLINE))* ~ EOI } // a *.cpp file
+skippable = { NEWLINE | comment_singleline | comment_multiline }
+doc_entry = { WHITE_SPACE* ~ doc_begin ~ (!doc_end ~ SPACE_SEPARATOR* ~ (command | doc_word | newline) ~ SPACE_SEPARATOR*)* ~ doc_end ~ skippable* ~ function_line? } // a single entry
+doc_file = { SOI ~ WHITE_SPACE* ~ (doc_entry | other_word)* ~ EOI } // a *.cpp file

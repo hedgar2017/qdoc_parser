@@ -12,22 +12,23 @@ use std::fmt;
 ///
 #[derive(Debug)]
 pub struct QDocEntry {
-    /// If this is set it means that the doc entry is attached to a cpp class
-    pub class_name: Option<String>,
-    /// If this is set it means that the doc entry is attached to a cpp function
-    pub target_cpp_function: Option<String>,
-    /// This has the original QDoc text in it
+    pub class: Option<String>,
+    pub brief: Option<String>,
+    pub function: Option<String>,
+
     pub qdoc_text: String,
-    /// This has the RustDoc translated/converted text in it
     pub rustdoc_text: String,
 }
 
 impl fmt::Display for QDocEntry {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if let Some(ref class) = self.class_name {
+        if let Some(ref class) = self.class {
             writeln!(f, "Class: {}", class);
         }
-        if let Some(ref function) = self.target_cpp_function {
+        if let Some(ref brief) = self.brief {
+            writeln!(f, "Brief: {}", brief);
+        }
+        if let Some(ref function) = self.function {
             writeln!(f, "Function: {}", function);
         }
         writeln!(f, "\nQDoc:");
@@ -35,9 +36,7 @@ impl fmt::Display for QDocEntry {
             writeln!(f, "{}", line)?;
         }
         writeln!(f, "\nRustdoc:");
-        for line in self.rustdoc_text.lines() {
-            writeln!(f, "{}", line)?;
-        }
+        writeln!(f, "{}", self.rustdoc_text)?;
         Ok(())
     }
 }
