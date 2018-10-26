@@ -2,7 +2,7 @@
 //! This example can be used for testing with entire Qt sources.
 //! Just git clone [Qt source code](https://github.com/qt/qtbase) and run with some script:
 //! for file in .../qtbase/**/*.cpp; do .../main "${file}" 2>&1 1>/dev/null | tee -a test.log
-//! 
+//!
 
 extern crate qdoc_parser;
 
@@ -20,10 +20,10 @@ fn main() {
     for (path, result) in info {
         match result {
             Ok(file) => {
-                eprintln!("Ok with file {}", path);
+                eprintln!("OK    {}", path);
                 println!("{}", file);
-            },
-            Err(error) => eprintln!("Error with file {}: {}", path, error.to_string()),
+            }
+            Err(error) => eprintln!("ERROR {}\n{}", path, error.to_string()),
         }
     }
 }

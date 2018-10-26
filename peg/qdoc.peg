@@ -11,9 +11,9 @@ comment_word = { (!symbol_comment_end ~ printable)+ } // may be the last word of
 // Lines
 comment_line = { (!symbol_comment_end ~ comment_word)* } // some words inside a comment
 other_line = { space* ~ (!symbol_comment_begin ~ word)* } // any other line not supposed to be processed
-function_line = { !symbol_comment_begin ~ (!NEWLINE ~ !"(" ~ (printable | " "))* ~ "(" ~ (!")" ~ (printable | " " | NEWLINE))* ~ ")" ~ ("const" | "volatile")* }
+function_line = { !symbol_comment_begin ~ (!"(" ~ (printable | " "))* ~ "(" ~ (!"{" ~ (printable | " " | NEWLINE))* ~ &(":" | "{") } // the C++ function declaration
 
 // Sections
-comment_singleline = { symbol_comment_begin ~ comment_line ~ symbol_comment_end } // e.g. '/*! comment */'
-comment_multiline = { symbol_comment_begin ~ NEWLINE? ~ (!symbol_comment_end ~ comment_line ~ NEWLINE?)* ~ symbol_comment_end } // usual multiline comments
-doc_file = { SOI ~ ((comment_singleline | comment_multiline | other_line) ~ NEWLINE)* ~ EOI } // a *.cpp file
+comment_singleline = { symbol_comment_begin ~ comment_line ~ symbol_comment_end ~ NEWLINE* ~ function_line? } // e.g. '/*! comment */'
+comment_multiline = { symbol_comment_begin ~ NEWLINE? ~ (!symbol_comment_end ~ comment_line ~ NEWLINE?)* ~ symbol_comment_end ~ NEWLINE* ~ function_line? } // usual multiline comments
+doc_file = { SOI ~ (comment_singleline | comment_multiline | (other_line ~ NEWLINE))* ~ EOI } // a *.cpp file

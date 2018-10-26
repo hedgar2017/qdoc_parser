@@ -74,15 +74,9 @@ impl QDocParser {
                                     .into_inner()
                                     .map(|pair| pair.as_span().as_str())
                                     .collect::<Vec<&str>>();
-                                for i in 0..((words.len() as isize) - 1) {
-                                    let i = i as usize;
-                                    if words[i] == "\\class" {
-                                        class_name = Some(words[i + 1].to_owned());
-                                    }
-                                }
-
-                                qdoc_lines.push(line_text.to_owned());
-                                rustdoc_lines.push(line_text.to_owned());
+                                class_name = Self::check_for_class(&words);
+                                qdoc_lines.push(line_text);
+                                rustdoc_lines.push(line_text);
                             }
                             Rule::function_line => {
                                 if class_name.is_none() {
@@ -93,19 +87,27 @@ impl QDocParser {
                             _ => (),
                         }
                     }
-                    let qdoc_text = qdoc_lines.join("\n").trim().to_owned();
-                    let rustdoc_text = rustdoc_lines.join("\n").trim().to_owned();
 
                     entries.push(QDocEntry {
                         class_name,
                         target_cpp_function,
-                        qdoc_text,
-                        rustdoc_text,
+                        qdoc_text: qdoc_lines.join("\n").trim().to_owned(),
+                        rustdoc_text: rustdoc_lines.join("\n").trim().to_owned(),
                     });
                 }
                 _ => (),
             };
         }
         Ok(QDocFile(entries))
+    }
+
+    fn check_for_class(words: &[&str]) -> Option<String> {
+        for i in 0..((words.len() as isize) - 1) {
+            let i = i as usize;
+            if words[i] == "\\class" {
+                return Some(words[i + 1].to_owned());
+            }
+        }
+        None
     }
 }
