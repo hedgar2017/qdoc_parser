@@ -60,7 +60,7 @@ impl QDocParser {
 
         for record in file {
             match record.as_rule() {
-                Rule::comment_singleline | Rule::comment_multiline => {
+                Rule::doc_singleline | Rule::doc_multiline => {
                     let mut class_name = None;
                     let mut target_cpp_function = None;
                     let mut qdoc_lines = Vec::with_capacity(64);
@@ -68,14 +68,15 @@ impl QDocParser {
 
                     for line in record.into_inner() {
                         match line.as_rule() {
-                            Rule::comment_line => {
+                            Rule::doc_line => {
                                 let line_text = line.as_span().as_str().trim();
+                                qdoc_lines.push(line_text);
+
                                 let words = line
                                     .into_inner()
-                                    .map(|pair| pair.as_span().as_str())
+                                    .map(|pair| pair.as_span().as_str().trim())
                                     .collect::<Vec<&str>>();
-                                class_name = Self::check_for_class(&words);
-                                qdoc_lines.push(line_text);
+                                class_name = class_name.or(Self::check_for_class(&words));
                                 rustdoc_lines.push(line_text);
                             }
                             Rule::function_line => {
@@ -102,11 +103,11 @@ impl QDocParser {
     }
 
     fn check_for_class(words: &[&str]) -> Option<String> {
-        for i in 0..((words.len() as isize) - 1) {
-            let i = i as usize;
-            if words[i] == "\\class" {
-                return Some(words[i + 1].to_owned());
-            }
+        if words.len() < 2 {
+            return None;
+        }
+        if words[0] == "\\class" {
+            return Some(words[1..].join(" "));
         }
         None
     }

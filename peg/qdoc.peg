@@ -1,19 +1,24 @@
 // Symbols
-space = { SPACE_SEPARATOR | "\t" } // C++ whitespace - either space or tab
-printable = { space* ~ !(NEWLINE | space) ~ ANY ~ space* } // any visible symbol
-symbol_comment_begin = { space* ~ "/*!" ~ space* } // QDoc comment begin symbol
-symbol_comment_end = { space* ~ "*/" ~ space* } // QDoc comment end symbol
+space = _{ SPACE_SEPARATOR | "\t" } // C++ whitespace - either space or tab
+printable = { !(NEWLINE | space) ~ ANY } // any visible symbol
+doc_begin = { space* ~ "/*!" ~ space* } // QDoc begin symbol
+doc_end = { space* ~ "*/" ~ space* } // QDoc end symbol
+function_begin = { "(" } // function declaration begin signatures
+function_end = { "{" | ";" | ": " } // function declaration end signatures
+function_symbol = { !(function_end | "#") ~ (space | ANY) } // not a function declaration end signature
 
 // Words
-word = { printable+ } // just a word with any symbols except the comment end surrounded with spaces
-comment_word = { (!symbol_comment_end ~ printable)+ } // may be the last word of a comment, so must be separated from the end symbol
+word = { space* ~ printable+ ~ space* } // just a word with any symbols except the 'doc end' surrounded with spaces
+doc_word = { space* ~ (!doc_end ~ printable)+ ~ space* } // may be the last word of a doc, so must be separated from the end symbol
 
 // Lines
-comment_line = { (!symbol_comment_end ~ comment_word)* } // some words inside a comment
-other_line = { space* ~ (!symbol_comment_begin ~ word)* } // any other line not supposed to be processed
-function_line = { !symbol_comment_begin ~ (!"(" ~ (printable | " "))* ~ "(" ~ (!"{" ~ (printable | " " | NEWLINE))* ~ &(":" | "{") } // the C++ function declaration
+doc_line = { (!doc_end ~ doc_word)* } // some words inside a docs
+other_line = { space* ~ (!doc_begin ~ word)* } // any other line not supposed to be processed
+comment_singleline = { "//" ~ (!NEWLINE ~ ANY)* ~ NEWLINE} // a non-QDoc single-line comment
+comment_multiline = { "/*" ~ (!"*/" ~ ANY)* ~ "*/"} // a non-QDoc multi-line comment
+function_line = { !doc_begin ~ (!function_begin ~ function_symbol)* ~ function_begin ~ function_symbol* ~ &function_end } // the C++ function declaration
 
 // Sections
-comment_singleline = { symbol_comment_begin ~ comment_line ~ symbol_comment_end ~ NEWLINE* ~ function_line? } // e.g. '/*! comment */'
-comment_multiline = { symbol_comment_begin ~ NEWLINE? ~ (!symbol_comment_end ~ comment_line ~ NEWLINE?)* ~ symbol_comment_end ~ NEWLINE* ~ function_line? } // usual multiline comments
-doc_file = { SOI ~ (comment_singleline | comment_multiline | (other_line ~ NEWLINE))* ~ EOI } // a *.cpp file
+doc_singleline = { doc_begin ~ doc_line ~ doc_end ~ (NEWLINE | comment_singleline | comment_multiline)* ~ function_line? } // e.g. '/*! docs */'
+doc_multiline = { doc_begin ~ NEWLINE? ~ (!doc_end ~ doc_line ~ NEWLINE?)* ~ doc_end ~ (NEWLINE | comment_singleline | comment_multiline)* ~ function_line? } // usual multiline docs
+doc_file = { SOI ~ (doc_singleline | doc_multiline | (other_line ~ NEWLINE))* ~ EOI } // a *.cpp file
