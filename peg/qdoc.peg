@@ -1,37 +1,40 @@
 // Symbols
-printable = { !WHITE_SPACE ~ ANY } // any visible symbol
+printable = { !WHITE_SPACE ~ ("\\\\" | ANY) } // any visible symbol or an escaped backslash
 doc_begin = { "/*!" } // QDoc begin symbol
 doc_end = { "*/" } // QDoc end symbol
 function_begin = { "(" } // function declaration begin signatures
 function_end = { "{" | ";" | ": " } // function declaration end signatures
 function_symbol = { !(function_end | "#") ~ ANY } // neither a function declaration end nor preprocessor directive signature
+identifier_symbol = { ":" | "_" | LETTER | NUMBER }
 comment_singleline_begin = { "//" }
 comment_multiline_begin = { "/*" ~ !"!" }
 comment_multiline_end = { "*/" }
 command_begin = { "\\" }
+not_a_command = { "\\" ~ ((("f" | "n" | "r" | "t" | "u" | "v" | "x" | "z") ~ !LOWERCASE_LETTER) | !LOWERCASE_LETTER) }
 
 // Words
 newline = { SPACE_SEPARATOR* ~ NEWLINE ~ SPACE_SEPARATOR* } // a tabbed and padded empty line
 other_word = { WHITE_SPACE* ~ (!doc_begin ~ printable)+ ~ WHITE_SPACE* } // any other word not supposed to be processed
-doc_word = { (!(doc_end | ("\\" ~ &(LETTER+))) ~ printable)+ } // a single word inside a doc entry
+doc_word = { (!doc_end ~ !(!not_a_command ~ "\\") ~ printable)+ } // a single word inside a doc entry
 bracketed_doc_word = { (!"}" ~ ANY)* }
+quoted_doc_word = { ("\"" | "'") ~ (!("\"" | "'") ~ ANY)* ~ ("\"" | "'") }
 
 // Commands (visible parts)
 cmd_a = { ("{" ~ bracketed_doc_word ~ "}") | doc_word }
 cmd_b = { ("{" ~ bracketed_doc_word ~ "}") | doc_word }
 cmd_brief = { (!("\\" | doc_end | newline{2}) ~ ANY)* }
 cmd_c = { ("{" ~ bracketed_doc_word ~ "}") | doc_word }
-cmd_class = { printable+ }
+cmd_class = { identifier_symbol+ }
 cmd_code = { (!"\\endcode" ~ ANY)* }
-cmd_codeline = { (!newline ~ ANY)* }
 cmd_dots = { "\\dots" }
 cmd_e = { ("{" ~ bracketed_doc_word ~ "}") | doc_word }
-cmd_enum = { printable+ }
-cmd_fn = { (!newline ~ ANY)* }
+cmd_enum = { identifier_symbol+ }
+cmd_fn = { (!newline ~ ANY)+ }
 cmd_gui = { ("{" ~ bracketed_doc_word ~ "}") | doc_word }
 cmd_image = { image_name ~ SPACE_SEPARATOR* ~ image_description }
 cmd_inlineimage = { image_name ~ SPACE_SEPARATOR* ~ image_description }
-cmd_inmodule = { printable+ }
+cmd_inmodule = { identifier_symbol+ }
+cmd_keyword = { "\\keyword" }
 cmd_li = { "\\li" }
 cmd_l = {
     ("[" ~ link_page ~ "]")? ~
@@ -40,44 +43,63 @@ cmd_l = {
 }
 cmd_legalese = { (!"\\endlegalese" ~ ANY)* }
 cmd_macos = { "\\macos" }
-cmd_macro = { printable+ }
-cmd_note = { (!("\\" | doc_end | newline{2}) ~ ANY)* }
+cmd_macro = { (!newline ~ ANY)+ }
+cmd_namespace = { identifier_symbol+ }
+cmd_note = { "\\note" }
+cmd_o = { "\\o" }
 cmd_overload = { (!newline ~ ANY)* }
-cmd_property = { printable+ }
+cmd_param = { (!newline ~ ANY)* }
+cmd_property = { identifier_symbol+ }
+cmd_return = { "\\return" }
 cmd_sa = { sa_link ~ ("," ~ newline* ~ sa_link)* }
+cmd_struct = { identifier_symbol+ }
+cmd_sup = { ("{" ~ bracketed_doc_word ~ "}") | doc_word }
 cmd_section1 = { (!newline ~ ANY)* }
 cmd_section2 = { (!newline ~ ANY)* }
 cmd_section3 = { (!newline ~ ANY)* }
 cmd_section4 = { (!newline ~ ANY)* }
+cmd_title = { (!newline ~ ANY)+ }
+cmd_tt = { ("{" ~ bracketed_doc_word ~ "}") | doc_word }
 cmd_uicontrol = { doc_word }
+cmd_unicode = { ("{" ~ bracketed_doc_word ~ "}") | doc_word }
 cmd_underline = { ("{" ~ bracketed_doc_word ~ "}") | doc_word }
 cmd_value = { enum_value_key ~ newline? ~ enum_value_description? }
-cmd_variable = { printable+ }
-cmd_warning = { (!("\\" | doc_end | newline{2}) ~ ANY)* }
+cmd_variable = { identifier_symbol+ }
+cmd_warning = { "\\warning" }
 
 // ignored
 cmd_badcode = { (!"\\endcode" ~ ANY)* }
+cmd_codeline = { (!newline ~ ANY)* }
 cmd_deprecated = { (!newline ~ ANY)* }
 cmd_div = { (!"\\enddiv" ~ ANY)* }
 cmd_endlist = { (!newline ~ ANY)* }
+cmd_group = { (!newline ~ ANY)* }
 cmd_header = { (!newline ~ ANY)* }
 cmd_headerfile = { (!newline ~ ANY)* }
+cmd_inheaderfile = { (!newline ~ ANY)* }
 cmd_include = { (!newline ~ ANY)* }
 cmd_index = { (!newline ~ ANY)* }
 cmd_ingroup = { (!newline ~ ANY)* }
 cmd_internal = { "\\internal" }
 cmd_list = { (!newline ~ ANY)* }
 cmd_newcode = { (!"\\endcode" ~ ANY)* }
+cmd_nonreentrant = { (!newline ~ ANY)* }
+cmd_oldcode = { (!newline ~ ANY)* }
 cmd_obsolete = { (!newline ~ ANY)* }
 cmd_omit = { (!"\\endomit" ~ ANY)* }
+cmd_omitvalue = { (!newline ~ ANY)* }
 cmd_page = { (!newline ~ ANY)* }
 cmd_quotefile = { (!newline ~ ANY)* }
 cmd_reentrant = { (!newline ~ ANY)* }
 cmd_relates = { (!newline ~ ANY)* }
 cmd_row = { (!newline ~ ANY)* }
 cmd_preliminary = { (!newline ~ ANY)* }
+cmd_printline = { (!newline ~ ANY)* }
+cmd_printuntil = { (!newline ~ ANY)* }
+cmd_quotefromfile = { (!newline ~ ANY)* }
 cmd_reimp = { "\\reimp" }
 cmd_since = { (!newline ~ ANY)* }
+cmd_skipto = { (!newline ~ ANY)* }
 cmd_snippet = { (!newline ~ ANY)* }
 cmd_table = { (!newline ~ ANY)* }
 cmd_endtable = { (!newline ~ ANY)* }
@@ -85,6 +107,7 @@ cmd_tableofcontents = { (!newline ~ ANY)* }
 cmd_target = { (!newline ~ ANY)* }
 cmd_threadsafe = { (!newline ~ ANY)* }
 cmd_typedef = { (!newline ~ ANY)* }
+cmd_wrapper = { (!newline ~ ANY)* }
 
 // image decomposition
 image_name = { doc_word }
@@ -105,68 +128,90 @@ enum_value_key = { doc_word }
 enum_value_description = { SPACE_SEPARATOR* ~ (!newline ~ doc_word ~ SPACE_SEPARATOR*)+ }
 
 command = {
-    ("\\a" ~ WHITE_SPACE* ~ cmd_a) |
-    ("\\badcode" ~ cmd_badcode ~ "\\endcode") |
-    ("\\brief" ~ SPACE_SEPARATOR* ~ cmd_brief ~ &("\\" | doc_end | newline{2})) |
-    ("\\b" ~ SPACE_SEPARATOR* ~ cmd_b) |
-    ("\\class" ~ SPACE_SEPARATOR* ~ cmd_class ~ newline) |
-    ("\\codeline" ~ SPACE_SEPARATOR* ~ cmd_codeline ~ newline) |
-    ("\\code" ~ SPACE_SEPARATOR* ~ cmd_code ~ "\\endcode") |
-    ("\\c" ~ WHITE_SPACE* ~ cmd_c) |
-    ("\\deprecated" ~ cmd_deprecated ~ newline) |
-    ("\\div" ~ cmd_div ~ "\\enddiv") |
-    (cmd_dots) |
-    ("\\endtable" ~ cmd_endtable ~ newline) |
-    ("\\endlist" ~ cmd_endlist ~ newline) |
-    ("\\enum" ~ SPACE_SEPARATOR* ~ cmd_enum ~ newline) |
-    ("\\e" ~ SPACE_SEPARATOR* ~ cmd_e) |
-    ("\\fn" ~ SPACE_SEPARATOR* ~ cmd_fn ~ newline) |
-    ("\\gui" ~ SPACE_SEPARATOR* ~ cmd_gui) |
-    ("\\header" ~ cmd_header ~ newline) |
-    ("\\headerfile" ~ cmd_headerfile ~ newline) |
-    ("\\image" ~ SPACE_SEPARATOR* ~ cmd_image ~ newline) |
-    ("\\inlineimage" ~ SPACE_SEPARATOR* ~ cmd_inlineimage ~ newline) |
-    ("\\include" ~ cmd_include ~ newline) |
-    ("\\ingroup" ~ cmd_ingroup ~ newline) |
-    ("\\inmodule" ~ SPACE_SEPARATOR* ~ cmd_inmodule ~ newline) |
-    ("\\index" ~ cmd_index ~ newline) |
-    (cmd_internal) |
-    ("\\legalese" ~ SPACE_SEPARATOR* ~ cmd_legalese ~ "\\endlegalese") |
-    ("\\list" ~ cmd_list ~ newline) |
-    (cmd_li) |
-    ("\\l" ~ SPACE_SEPARATOR* ~ cmd_l) |
-    (cmd_macos) |
-    ("\\macro" ~ SPACE_SEPARATOR* ~ cmd_macro ~ newline) |
-    ("\\newcode" ~ cmd_newcode ~ "\\endcode") |
-    ("\\note" ~ SPACE_SEPARATOR* ~ cmd_note ~ &("\\" | doc_end | newline{2})) |
-    ("\\obsolete" ~ cmd_obsolete ~ newline) |
-    ("\\omit" ~ cmd_omit ~ "\\endomit") |
-    ("\\overload" ~ SPACE_SEPARATOR* ~ cmd_overload ~ newline) |
-    ("\\preliminary" ~ cmd_preliminary ~ newline) |
-    ("\\property" ~ SPACE_SEPARATOR* ~ cmd_property ~ newline) |
-    ("\\page" ~ cmd_page ~ newline) |
-    ("\\quotefile" ~ cmd_quotefile ~ newline) |
-    ("\\reentrant" ~ cmd_reentrant ~ newline) |
-    ("\\relates" ~ cmd_relates ~ newline) |
-    (cmd_reimp) |
-    ("\\row" ~ cmd_row ~ newline) |
-    ("\\section1" ~ SPACE_SEPARATOR* ~ cmd_section1 ~ newline) |
-    ("\\section2" ~ SPACE_SEPARATOR* ~ cmd_section2 ~ newline) |
-    ("\\section3" ~ SPACE_SEPARATOR* ~ cmd_section3 ~ newline) |
-    ("\\section4" ~ SPACE_SEPARATOR* ~ cmd_section4 ~ newline) |
-    ("\\sa" ~ SPACE_SEPARATOR* ~ cmd_sa ~ newline) |
-    ("\\since" ~ cmd_since ~ newline) |
-    ("\\snippet" ~ cmd_snippet ~ newline) |
-    ("\\tableofcontents" ~ cmd_tableofcontents ~ newline) |
-    ("\\table" ~ cmd_table ~ newline) |
-    ("\\target" ~ cmd_target ~ newline) |
-    ("\\threadsafe" ~ cmd_threadsafe ~ newline) |
-    ("\\typedef" ~ cmd_typedef ~ newline) |
-    ("\\uicontrol" ~ SPACE_SEPARATOR* ~ cmd_uicontrol) |
-    ("\\underline" ~ SPACE_SEPARATOR* ~ cmd_underline) |
-    ("\\value" ~ SPACE_SEPARATOR* ~ cmd_value) |
-    ("\\variable" ~ SPACE_SEPARATOR* ~ cmd_variable ~ newline) |
-    ("\\warning" ~ SPACE_SEPARATOR* ~ cmd_warning ~ &("\\" | doc_end | newline{2}))
+    !not_a_command ~ (
+        ("\\a" ~ WHITE_SPACE* ~ cmd_a) |
+        ("\\badcode" ~ cmd_badcode ~ "\\endcode") |
+        ("\\brief" ~ SPACE_SEPARATOR* ~ cmd_brief ~ &("\\" | doc_end | newline{2})) |
+        ("\\b" ~ SPACE_SEPARATOR* ~ cmd_b) |
+        ("\\class" ~ SPACE_SEPARATOR* ~ cmd_class ~ newline) |
+        ("\\codeline" ~ cmd_codeline ~ newline) |
+        ("\\code" ~ SPACE_SEPARATOR* ~ cmd_code ~ "\\endcode") |
+        ("\\c" ~ WHITE_SPACE* ~ cmd_c) |
+        ("\\deprecated" ~ cmd_deprecated ~ newline) |
+        ("\\div" ~ cmd_div ~ "\\enddiv") |
+        (cmd_dots) |
+        ("\\endtable" ~ cmd_endtable ~ newline) |
+        ("\\endlist" ~ cmd_endlist ~ newline) |
+        ("\\enum" ~ SPACE_SEPARATOR* ~ cmd_enum ~ newline) |
+        ("\\e" ~ WHITE_SPACE* ~ cmd_e) |
+        ("\\fn" ~ SPACE_SEPARATOR* ~ cmd_fn ~ newline) |
+        ("\\group" ~ cmd_group ~ newline) |
+        ("\\gui" ~ SPACE_SEPARATOR* ~ cmd_gui) |
+        ("\\header" ~ cmd_header ~ newline) |
+        ("\\headerfile" ~ cmd_headerfile ~ newline) |
+        ("\\image" ~ SPACE_SEPARATOR* ~ cmd_image ~ newline) |
+        ("\\inheaderfile" ~ SPACE_SEPARATOR* ~ cmd_inheaderfile ~ newline) |
+        ("\\inlineimage" ~ SPACE_SEPARATOR* ~ cmd_inlineimage ~ newline) |
+        ("\\include" ~ cmd_include ~ newline) |
+        ("\\ingroup" ~ cmd_ingroup ~ newline) |
+        ("\\inmodule" ~ SPACE_SEPARATOR* ~ cmd_inmodule ~ newline) |
+        ("\\index" ~ cmd_index ~ newline) |
+        (cmd_internal) |
+        (cmd_keyword) |
+        ("\\legalese" ~ SPACE_SEPARATOR* ~ cmd_legalese ~ "\\endlegalese") |
+        ("\\list" ~ cmd_list ~ newline) |
+        (cmd_li) |
+        ("\\l" ~ SPACE_SEPARATOR* ~ cmd_l) |
+        (cmd_macos) |
+        ("\\macro" ~ SPACE_SEPARATOR* ~ cmd_macro ~ newline) |
+        ("\\namespace" ~ SPACE_SEPARATOR* ~ cmd_namespace ~ newline) |
+        ("\\newcode" ~ cmd_newcode ~ "\\endcode") |
+        ("\\nonreentrant" ~ cmd_nonreentrant ~ newline) |
+        (cmd_note) |
+        ("\\oldcode" ~ cmd_oldcode ~ newline) |
+        ("\\obsolete" ~ cmd_obsolete ~ newline) |
+        ("\\omitvalue" ~ cmd_omitvalue ~ newline) |
+        ("\\omit" ~ cmd_omit ~ "\\endomit") |
+        ("\\overload" ~ SPACE_SEPARATOR* ~ cmd_overload ~ newline) |
+        (cmd_o) |
+        ("\\param" ~ cmd_param ~ newline) |
+        ("\\preliminary" ~ cmd_preliminary ~ newline) |
+        ("\\printline" ~ cmd_printline ~ newline) |
+        ("\\printuntil" ~ cmd_printuntil ~ newline) |
+        ("\\property" ~ SPACE_SEPARATOR* ~ cmd_property ~ newline) |
+        ("\\page" ~ cmd_page ~ newline) |
+        ("\\quotefromfile" ~ cmd_quotefile ~ newline) |
+        ("\\quotefile" ~ cmd_quotefile ~ newline) |
+        ("\\reentrant" ~ cmd_reentrant ~ newline) |
+        ("\\relates" ~ cmd_relates ~ newline) |
+        (cmd_return) |
+        (cmd_reimp) |
+        ("\\row" ~ cmd_row ~ newline) |
+        ("\\section1" ~ SPACE_SEPARATOR* ~ cmd_section1 ~ newline) |
+        ("\\section2" ~ SPACE_SEPARATOR* ~ cmd_section2 ~ newline) |
+        ("\\section3" ~ SPACE_SEPARATOR* ~ cmd_section3 ~ newline) |
+        ("\\section4" ~ SPACE_SEPARATOR* ~ cmd_section4 ~ newline) |
+        ("\\struct" ~ SPACE_SEPARATOR* ~ cmd_struct ~ newline) |
+        ("\\sup" ~ WHITE_SPACE* ~ cmd_sup) |
+        ("\\sa" ~ SPACE_SEPARATOR* ~ cmd_sa ~ newline) |
+        ("\\since" ~ cmd_since ~ newline) |
+        ("\\skipto" ~ cmd_skipto ~ newline) |
+        ("\\snippet" ~ cmd_snippet ~ newline) |
+        ("\\title" ~ SPACE_SEPARATOR* ~ cmd_title ~ newline) |
+        ("\\tt" ~ WHITE_SPACE* ~ cmd_tt) |
+        ("\\tableofcontents" ~ cmd_tableofcontents ~ newline) |
+        ("\\table" ~ cmd_table ~ newline) |
+        ("\\target" ~ cmd_target ~ newline) |
+        ("\\threadsafe" ~ cmd_threadsafe ~ newline) |
+        ("\\typedef" ~ cmd_typedef ~ newline) |
+        ("\\uicontrol" ~ WHITE_SPACE* ~ cmd_uicontrol) |
+        ("\\unicode" ~ SPACE_SEPARATOR* ~ cmd_unicode) |
+        ("\\underline" ~ SPACE_SEPARATOR* ~ cmd_underline) |
+        ("\\value" ~ SPACE_SEPARATOR* ~ cmd_value) |
+        ("\\variable" ~ SPACE_SEPARATOR* ~ cmd_variable ~ newline) |
+        (cmd_warning) |
+        ("\\wrapper" ~ cmd_wrapper ~ newline)
+    )
 }
 
 // Lines
@@ -176,5 +221,5 @@ function_line = { !doc_begin ~ (!function_begin ~ function_symbol)* ~ function_b
 
 // Sections
 skippable = { newline | comment_singleline | comment_multiline }
-doc_entry = { doc_begin ~ (SPACE_SEPARATOR* ~ !doc_end ~ ((command | doc_word) ~ SPACE_SEPARATOR*) | newline)* ~ doc_end ~ skippable* ~ function_line? } // a single entry
+doc_entry = { doc_begin ~ (SPACE_SEPARATOR* ~ !doc_end ~ ((quoted_doc_word | command | doc_word) ~ SPACE_SEPARATOR*) | newline)* ~ doc_end ~ skippable* ~ function_line? } // a single entry
 doc_file = { SOI ~ (WHITE_SPACE* ~ doc_entry | other_word)* ~ EOI } // a *.cpp file

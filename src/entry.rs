@@ -17,6 +17,7 @@ pub struct QDocEnum {
 pub enum QDocItem {
     Undefined,
     Class(String),
+    Struct(String),
     Function(String),
     Macro(String),
     Property(String),
@@ -33,6 +34,8 @@ pub enum QDocItem {
 #[derive(Debug)]
 pub struct QDocEntry {
     pub module: Option<String>,
+    pub namespace: Option<String>,
+    pub title: Option<String>,
     pub brief: Option<String>,
     pub data: QDocItem,
     pub qdoc_text: String,
@@ -40,7 +43,7 @@ pub struct QDocEntry {
 }
 
 impl QDocEntry {
-    pub fn rustdoc(&self) -> String {
+    pub fn formatted_rustdoc(&self) -> String {
         let mut lines = self.rustdoc_text.lines().map(|line| line.trim()).collect::<Vec<&str>>();
         lines.dedup();
         lines.join("\n")
@@ -51,6 +54,8 @@ impl Default for QDocEntry {
     fn default() -> Self {
         QDocEntry {
             module: None,
+            namespace: None,
+            title: None,
             brief: None,
             data: QDocItem::Undefined,
             qdoc_text: String::new(),
@@ -66,11 +71,18 @@ impl fmt::Display for QDocEntry {
         if let Some(ref module) = self.module {
             writeln!(f, "Module: {}", module);
         }
+        if let Some(ref namespace) = self.namespace {
+            writeln!(f, "Namespace: {}", namespace);
+        }
+        if let Some(ref title) = self.title {
+            writeln!(f, "Title: {}", title);
+        }
         if let Some(ref brief) = self.brief {
             writeln!(f, "Brief: {}", brief);
         }
         let _ = match self.data {
             Class(ref value) => writeln!(f, "Class: {}", value),
+            Struct(ref value) => writeln!(f, "Struct: {}", value),
             Function(ref value) => writeln!(f, "Function: {}", value),
             Macro(ref value) => writeln!(f, "Macro: {}", value),
             Property(ref value) => writeln!(f, "Property: {}", value),
@@ -88,7 +100,7 @@ impl fmt::Display for QDocEntry {
         for line in self.qdoc_text.lines() {
             writeln!(f, "{}", line)?;
         }
-        writeln!(f, "\nRustdoc:\n{}",  self.rustdoc());
+        writeln!(f, "\nRustdoc:\n{}", self.formatted_rustdoc());
         Ok(())
     }
 }

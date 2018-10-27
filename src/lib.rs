@@ -54,7 +54,7 @@ impl QDocParser {
         let file = Self::parse(Rule::doc_file, &data)
             .map_err(|error| Error::Parse(error.to_string()))?
             .next()
-            .unwrap()
+            .expect("file next() panic")
             .into_inner();
         let mut entries = Vec::with_capacity(64);
 
@@ -69,35 +69,36 @@ impl QDocParser {
                         match element.as_rule() {
                             Rule::doc_word => rustdoc_lines.push(element.as_span().as_str().to_owned()),
                             Rule::command => {
-                                let command = element.into_inner().next().unwrap();
+                                let command = element.into_inner().next().expect("command next() panic");
+                                let command_text = command.as_span().as_str().trim();
                                 match command.as_rule() {
                                     Rule::cmd_a => {
-                                        let word = command.into_inner().next().unwrap();
+                                        let word = command.into_inner().next().expect(&format!("\\a word next() panic: {}", command_text));
                                         match word.as_rule() {
                                             Rule::doc_word | Rule::bracketed_doc_word => rustdoc_lines.push(format!("*{}*", word.as_span().as_str().trim())),
                                             _ => (),
                                         }
                                     },
                                     Rule::cmd_b | Rule::cmd_gui | Rule::cmd_underline => {
-                                        let word = command.into_inner().next().unwrap();
+                                        let word = command.into_inner().next().expect(&format!("\\b word next() panic: {}", command_text));
                                         match word.as_rule() {
                                             Rule::doc_word | Rule::bracketed_doc_word => rustdoc_lines.push(format!("**{}**", word.as_span().as_str().trim())),
                                             _ => (),
                                         }
                                     },
                                     Rule::cmd_brief => entry.brief = Some(command.as_span().as_str().trim().to_owned()),
-                                    Rule::cmd_c | Rule::cmd_codeline => {
-                                        let word = command.into_inner().next().unwrap();
+                                    Rule::cmd_c => {
+                                        let word = command.into_inner().next().expect(&format!("\\c word next() panic: {}", command_text));
                                         match word.as_rule() {
                                             Rule::doc_word | Rule::bracketed_doc_word => rustdoc_lines.push(format!("`{}`", word.as_span().as_str().trim())),
                                             _ => (),
                                         }
-                                    },                                    
+                                    },
                                     Rule::cmd_code | Rule::cmd_legalese => rustdoc_lines.push(format!("```\n    {} \n ```\n", command.as_span().as_str().trim())),
                                     Rule::cmd_class => entry.data = QDocItem::Class(command.as_span().as_str().trim().to_owned()),
                                     Rule::cmd_dots => rustdoc_lines.push(format!("...")),
                                     Rule::cmd_e => {
-                                        let word = command.into_inner().next().unwrap();
+                                        let word = command.into_inner().next().expect(&format!("\\e word next() panic: {}", command_text));
                                         match word.as_rule() {
                                             Rule::doc_word | Rule::bracketed_doc_word => rustdoc_lines.push(format!("*{}*", word.as_span().as_str().trim())),
                                             _ => (),
@@ -119,6 +120,7 @@ impl QDocParser {
                                     },
                                     Rule::cmd_inmodule => entry.module = Some(command.as_span().as_str().trim().to_owned()),
                                     Rule::cmd_internal => continue 'record,
+                                    Rule::cmd_keyword => rustdoc_lines.push(format!("**Keyword**:")),
                                     Rule::cmd_l => {
                                         let mut _page = "";
                                         let mut target = "";
@@ -136,12 +138,15 @@ impl QDocParser {
                                         }
                                         rustdoc_lines.push(format!("[{}]({})\n", text, target));
                                     },
-                                    Rule::cmd_li => rustdoc_lines.push(format!("*")),
+                                    Rule::cmd_li | Rule::cmd_o => rustdoc_lines.push(format!("*")),
                                     Rule::cmd_macos => rustdoc_lines.push(format!("MacOS")),
                                     Rule::cmd_macro => entry.data = QDocItem::Macro(command.as_span().as_str().trim().to_owned()),
-                                    Rule::cmd_note => rustdoc_lines.push(format!("**Note**: {}\n", command.as_span().as_str().trim().replace("\n", " "))),
+                                    Rule::cmd_namespace => entry.namespace = Some(command.as_span().as_str().trim().to_owned()),
+                                    Rule::cmd_note => rustdoc_lines.push(format!("**Note**:")),
                                     Rule::cmd_overload => (),
+                                    Rule::cmd_param => (),
                                     Rule::cmd_property => entry.data = QDocItem::Property(command.as_span().as_str().trim().to_owned()),
+                                    Rule::cmd_return => rustdoc_lines.push(format!("**Returns**")),
                                     Rule::cmd_sa => {
                                         for part in command.into_inner() {
                                             match part.as_rule() {
@@ -154,6 +159,23 @@ impl QDocParser {
                                     Rule::cmd_section2 => rustdoc_lines.push(format!("## {}\n", command.as_span().as_str().trim())),
                                     Rule::cmd_section3 => rustdoc_lines.push(format!("### {}\n", command.as_span().as_str().trim())),
                                     Rule::cmd_section4 => rustdoc_lines.push(format!("#### {}\n", command.as_span().as_str().trim())),
+                                    Rule::cmd_struct => entry.data = QDocItem::Struct(command.as_span().as_str().trim().to_owned()),
+                                    Rule::cmd_sup => rustdoc_lines.push(format!("^{}", command.as_span().as_str().trim())),
+                                    Rule::cmd_title => entry.title = Some(command.as_span().as_str().trim().to_owned()),
+                                    Rule::cmd_tt => {
+                                        let word = command.into_inner().next().expect(&format!("\\tt word next() panic: {}", command_text));
+                                        match word.as_rule() {
+                                            Rule::doc_word | Rule::bracketed_doc_word => rustdoc_lines.push(format!("`{}`", word.as_span().as_str().trim())),
+                                            _ => (),
+                                        }
+                                    },
+                                    Rule::cmd_unicode => {
+                                        let word = command.into_inner().next().expect(&format!("\\unicode word next() panic: {}", command_text));
+                                        match word.as_rule() {
+                                            Rule::doc_word | Rule::bracketed_doc_word => rustdoc_lines.push(format!("\\u{}", word.as_span().as_str().trim())),
+                                            _ => (),
+                                        }
+                                    },
                                     Rule::cmd_uicontrol => rustdoc_lines.push(format!("**{}**", command.as_span().as_str().trim())),
                                     Rule::cmd_value => {
                                         let mut key = "";
@@ -170,7 +192,7 @@ impl QDocParser {
                                         }
                                     },
                                     Rule::cmd_variable => entry.data = QDocItem::Variable(command.as_span().as_str().trim().to_owned()),
-                                    Rule::cmd_warning => rustdoc_lines.push(format!("**Warning**: {}\n", command.as_span().as_str().trim())),
+                                    Rule::cmd_warning => rustdoc_lines.push(format!("**Warning**:")),
                                     _ => (),
                                 }
                             }

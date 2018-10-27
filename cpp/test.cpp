@@ -126,6 +126,19 @@
     \l {Shared Classes}
     \l http://qt-project.org/
 
+    \unicode DEAD
+
+    Some text with a quoted command '\class'
+    Some text with a quoted command '\\class'
+    Some text with a quoted command "\class"
+    Some text with a quoted command "\\class"
+    Some text with a quoted\\quoted command "c:\windows\data"
+
+    \title Title
+    \namespace Namespace
+
+    \keyword some keyword
+
     \fn void function() const volatile
     
     QWidgetBackingStoreTracker is a thin wrapper around a \a QWidgetBackingStore pointer,
