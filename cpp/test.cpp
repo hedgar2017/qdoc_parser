@@ -33,22 +33,18 @@
 
     \dots \e {a very italic text \\e}
 
-    \fn void function() const volatile
-
     \gui{GUI}
 
     \image image.jpg "Just an image"
     \inlineimage image.jpg Just an inline image
-
-    \l [PAGE] {http://google.com} {Google}
-    \l {assertions} {assertions}
 
     \legalese
     These are
     licence lines
     \endlegalese
 
-    \macos \note A Mega
+    \macos
+    \note A Mega
     Ultra multiline note
     with some useless text
 
@@ -60,7 +56,6 @@
     \endcode
 
     \deprecated Deprecated stuff
-    \internal Internal stuff
     \obsolete Obsolete stuff
     \page Page stuff
     \quotefile Quotefile stuff
@@ -113,6 +108,21 @@
     \li Getting Started
     \li Hello Qt
     \li Bye Qt
+
+    \l [PAGE] {http://google.com} {Google}
+    \l {assertions} {assertions}
+    \l QWidget
+    \l QWidget::sizeHint()
+    \l QWidget::removeAction(QAction* action)
+    \l <QtGlobal>
+    \l widgets/wiggly
+    \l {QWidget Class Reference}
+    \l {Introduction to QDoc}
+    \l fontmatching
+    \l {Shared Classes}
+    \l http://qt-project.org/
+
+    \fn void function() const volatile
     
     QWidgetBackingStoreTracker is a thin wrapper around a \a QWidgetBackingStore pointer,
     which maintains a list of the \b {QWidgets} which are currently using the backing

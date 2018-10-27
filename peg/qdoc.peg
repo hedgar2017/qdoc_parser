@@ -15,8 +15,8 @@ other_word = { WHITE_SPACE* ~ (!doc_begin ~ printable)+ ~ WHITE_SPACE* } // any 
 doc_word = { (!doc_end ~ printable)+ } // a single word inside a doc entry
 
 // Commands (visible parts)
-cmd_a = { doc_word ~ SPACE_SEPARATOR* }
-cmd_b = { (!"}" ~ ANY)* ~ SPACE_SEPARATOR* }
+cmd_a = { doc_word }
+cmd_b = { (!"}" ~ ANY)* }
 cmd_brief = { (!("\\" | doc_end | newline{2}) ~ ANY)* }
 cmd_c = { printable+ }
 cmd_class = { printable+ }
@@ -32,9 +32,9 @@ cmd_inlineimage = { image_name ~ SPACE_SEPARATOR* ~ image_description }
 cmd_inmodule = { printable+ }
 cmd_li = { "\\li" }
 cmd_l = {
-    ("[" ~ link_page ~ "]")? ~ WHITE_SPACE* ~
-    (("{" ~ link_target_multi ~ "}") | link_target_single) ~
-    (WHITE_SPACE* ~ (("{" ~ link_name_multi ~ "}") | link_name_single))?
+    ("[" ~ link_page ~ "]")? ~
+    (SPACE_SEPARATOR* ~ (("{" ~ link_target_multi ~ "}") | link_target_single )) ~
+    (SPACE_SEPARATOR* ~ (("{" ~ link_name_multi ~ "}") | link_name_single))?
 }
 cmd_legalese = { (!"\\endlegalese" ~ ANY)* }
 cmd_macos = { "\\macos" }
@@ -131,7 +131,7 @@ command = {
     ("\\legalese" ~ SPACE_SEPARATOR* ~ cmd_legalese ~ "\\endlegalese") |
     ("\\list" ~ cmd_list ~ newline) |
     (cmd_li) |
-    ("\\l" ~ SPACE_SEPARATOR* ~ cmd_l ~ newline) |
+    ("\\l" ~ SPACE_SEPARATOR* ~ cmd_l) |
     (cmd_macos) |
     ("\\newcode" ~ cmd_newcode ~ "\\endcode") |
     ("\\note" ~ SPACE_SEPARATOR* ~ cmd_note ~ &("\\" | doc_end | newline{2})) |
