@@ -1,6 +1,6 @@
 mod error;
-mod entry;
 mod file;
+pub mod entry;
 
 extern crate pest;
 #[macro_use]
