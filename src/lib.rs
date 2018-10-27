@@ -15,7 +15,7 @@ use pest::Parser;
 use rayon::prelude::*;
 
 use error::Error;
-use entry::QDocEntry;
+use entry::{QDocEntry, QDocItem, QDocEnum};
 use file::QDocFile;
 
 type QDocResult = Result<QDocFile, Error>;
@@ -61,76 +61,110 @@ impl QDocParser {
         for record in file {
             match record.as_rule() {
                 Rule::doc_entry => {
-                    let mut class = None;
-                    let mut brief = None;
-                    let mut function = None;
+                    let mut entry = QDocEntry::default();
+                    entry.qdoc_text = record.as_span().as_str().to_owned();
 
-                    let qdoc_text = record.as_span().as_str().to_owned();
                     let mut rustdoc_lines = Vec::with_capacity(64);
-
                     for element in record.into_inner() {
                         match element.as_rule() {
-                            Rule::doc_word => {
-                                let text = element.as_span().as_str();
-                                rustdoc_lines.push(format!("{} ", text));
-                            }
+                            Rule::doc_word => rustdoc_lines.push(element.as_span().as_str().to_owned()),
                             Rule::command => {
                                 let command = element.into_inner().next().unwrap();
-                                println!("Command: {}", command.as_span().as_str());
+                                //println!("Command: {}", command.as_span().as_str());
                                 match command.as_rule() {
                                     Rule::cmd_a => {
-                                        let text = command.as_span().as_str().trim();
-                                        rustdoc_lines.push(format!("*{}*", text));
+                                        let word = command.into_inner().next().unwrap().as_span().as_str();
+                                        rustdoc_lines.push(format!("*{}*", word));
                                     },
-                                    Rule::cmd_b | Rule::cmd_gui => {
-                                        let text = command.as_span().as_str().trim();
-                                        rustdoc_lines.push(format!("**{}**", text));
+                                    Rule::cmd_b | Rule::cmd_gui | Rule::cmd_underline => rustdoc_lines.push(format!("**{}**", command.as_span().as_str().trim())),
+                                    Rule::cmd_brief => entry.brief = Some(command.as_span().as_str().trim().to_owned()),
+                                    Rule::cmd_c | Rule::cmd_codeline => rustdoc_lines.push(format!("`{}`", command.as_span().as_str().trim())),
+                                    Rule::cmd_code | Rule::cmd_legalese => rustdoc_lines.push(format!("`\n{}\n`", command.as_span().as_str().trim())),
+                                    Rule::cmd_class => entry.data = QDocItem::Class(command.as_span().as_str().trim().to_owned()),
+                                    Rule::cmd_dots => rustdoc_lines.push(format!("...")),
+                                    Rule::cmd_e => rustdoc_lines.push(format!("*{}*", command.as_span().as_str().trim())),
+                                    Rule::cmd_enum => entry.data = QDocItem::Enum(QDocEnum{name: command.as_span().as_str().trim().to_owned(), data: HashMap::new()}),
+                                    Rule::cmd_fn => entry.data = QDocItem::Function(command.as_span().as_str().trim().to_owned()),
+                                    Rule::cmd_image | Rule::cmd_inlineimage => {
+                                        let mut name = "";
+                                        let mut desc = "";
+                                        for part in command.into_inner() {
+                                            match part.as_rule() {
+                                                Rule::image_name => name = part.as_span().as_str().trim(),
+                                                Rule::image_description => desc = part.as_span().as_str().trim(),
+                                                _ => (),
+                                            }
+                                        }
+                                        rustdoc_lines.push(format!("![{}]({})\n", desc, name));
                                     },
-                                    Rule::cmd_brief => {
-                                        brief = Some(command.as_span().as_str().trim().to_owned());
+                                    Rule::cmd_inmodule => entry.module = Some(command.as_span().as_str().trim().to_owned()),
+                                    Rule::cmd_l => {
+                                        let mut _page = "";
+                                        let mut target = "";
+                                        let mut text = "";
+                                        for part in command.into_inner() {
+                                            match part.as_rule() {
+                                                Rule::link_page => _page = part.as_span().as_str().trim(),
+                                                Rule::link_target_single | Rule::link_target_multi => target = part.as_span().as_str().trim(),
+                                                Rule::link_name_single | Rule::link_name_multi => text = part.as_span().as_str().trim(),
+                                                _ => (),
+                                            }
+                                        }
+                                        rustdoc_lines.push(format!("[{}]({})\n", text, target));
                                     },
-                                    Rule::cmd_c | Rule::cmd_code | Rule::cmd_codeline => {
-                                        let text = command.as_span().as_str().trim();
-                                        rustdoc_lines.push(format!("`{}`", text));
+                                    Rule::cmd_li => rustdoc_lines.push(format!("*")),
+                                    Rule::cmd_macos => rustdoc_lines.push(format!("MacOS")),
+                                    Rule::cmd_note => rustdoc_lines.push(format!("# {}\n", command.as_span().as_str().trim())),
+                                    Rule::cmd_overload => (),
+                                    Rule::cmd_property => entry.data = QDocItem::Property(command.as_span().as_str().trim().to_owned()),
+                                    Rule::cmd_sa => {
+                                        for part in command.into_inner() {
+                                            match part.as_rule() {
+                                                Rule::sa_link => rustdoc_lines.push(format!("{}\n", part.as_span().as_str())),
+                                                _ => (),
+                                            }
+                                        }
                                     },
-                                    Rule::cmd_class => {
-                                        class = Some(command.as_span().as_str().trim().to_owned());
+                                    Rule::cmd_section1 => rustdoc_lines.push(format!("# {}\n", command.as_span().as_str().trim())),
+                                    Rule::cmd_section2 => rustdoc_lines.push(format!("## {}\n", command.as_span().as_str().trim())),
+                                    Rule::cmd_section3 => rustdoc_lines.push(format!("### {}\n", command.as_span().as_str().trim())),
+                                    Rule::cmd_section4 => rustdoc_lines.push(format!("#### {}\n", command.as_span().as_str().trim())),
+                                    Rule::cmd_uicontrol => rustdoc_lines.push(format!("**{}**", command.as_span().as_str().trim())),
+                                    Rule::cmd_value => {
+                                        let mut key = "";
+                                        let mut description = "";
+                                        for part in command.into_inner() {
+                                            match part.as_rule() {
+                                                Rule::enum_value_key => key = part.as_span().as_str().trim(),
+                                                Rule::enum_value_description => description = part.as_span().as_str().trim(),
+                                                _ => (),
+                                            }
+                                        }
+                                        if let QDocItem::Enum(ref mut value) = entry.data {
+                                            value.data.insert(key.to_owned(), description.to_owned());
+                                        }
                                     },
-                                    Rule::cmd_dots => {
-                                        rustdoc_lines.push(format!("..."));
-                                    },
-                                    Rule::cmd_e => {
-                                        let text = command.as_span().as_str().trim();
-                                        rustdoc_lines.push(format!("*{}*", text));
-                                    },
-                                    Rule::cmd_fn => {
-                                        function = Some(command.as_span().as_str().trim().to_owned());
-                                    },
+                                    Rule::cmd_variable => entry.data = QDocItem::Variable(command.as_span().as_str().trim().to_owned()),
+                                    Rule::cmd_warning => rustdoc_lines.push(format!("Warning: **{}**\n", command.as_span().as_str().trim())),
                                     _ => (),
                                 }
                             }
                             Rule::newline => rustdoc_lines.push("\n".to_string()),
                             Rule::function_line => {
-                                if class.is_none() && function.is_none() {
-                                    function =
-                                        Some(element.as_span().as_str().trim().to_owned());
+                                if let QDocItem::Undefined = entry.data {
+                                    entry.data = QDocItem::Function(element.as_span().as_str().trim().to_owned());
                                 }
                             }
                             _ => (),
                         }
                     }
 
-                    for (i, v) in rustdoc_lines.iter().enumerate() {
-                        println!("{}: {}", i, v);
-                    }
+                    // for (i, v) in rustdoc_lines.iter().enumerate() {
+                    //     println!("{}: {}", i, v);
+                    // }
 
-                    entries.push(QDocEntry {
-                        class,
-                        brief,
-                        function,
-                        qdoc_text,
-                        rustdoc_text: rustdoc_lines.join("").to_owned(),
-                    });
+                    entry.rustdoc_text = rustdoc_lines.join(" ").to_owned();
+                    entries.push(entry);
                 }
                 _ => (),
             };
