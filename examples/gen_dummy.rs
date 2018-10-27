@@ -12,11 +12,11 @@ fn print_doc_comments<W: Write>(dest: &mut W, text: &String, indent: usize) {
     let lines = text.split("\n");
 
     for line in lines {
-        if line.len() > 1 {
-            for _ in 0..indent {
-                write!(dest, " ").unwrap();
-            }
+		for _ in 0..indent {
+			write!(dest, " ").unwrap();
+		}
 
+        if line.len() > 1 {
             writeln!(dest, "/// {}", &line[1..]);
         } else {
             writeln!(dest, "///");
