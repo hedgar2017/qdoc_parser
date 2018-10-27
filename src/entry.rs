@@ -18,6 +18,7 @@ pub enum QDocItem {
     Undefined,
     Class(String),
     Function(String),
+    Macro(String),
     Property(String),
     Variable(String),
     Enum(QDocEnum),
@@ -71,6 +72,7 @@ impl fmt::Display for QDocEntry {
         let _ = match self.data {
             Class(ref value) => writeln!(f, "Class: {}", value),
             Function(ref value) => writeln!(f, "Function: {}", value),
+            Macro(ref value) => writeln!(f, "Macro: {}", value),
             Property(ref value) => writeln!(f, "Property: {}", value),
             Variable(ref value) => writeln!(f, "Variable: {}", value),
             Enum(ref value) => {

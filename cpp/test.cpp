@@ -15,6 +15,10 @@
            of everything
     \c Codeword
 
+    \c {Bracketed codeword}
+
+    \e {Bracketed eeeeeeee}
+
     \class Class
 
     \code
