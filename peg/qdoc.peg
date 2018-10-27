@@ -17,7 +17,7 @@ newline = { SPACE_SEPARATOR* ~ NEWLINE ~ SPACE_SEPARATOR* } // a tabbed and padd
 other_word = { WHITE_SPACE* ~ (!doc_begin ~ printable)+ ~ WHITE_SPACE* } // any other word not supposed to be processed
 doc_word = { (!doc_end ~ !(!not_a_command ~ command_begin) ~ printable)+ } // a single word inside a doc entry
 bracketed_doc_word = { (!"}" ~ ANY)* }
-quoted_doc_word = { ("\"" | "'") ~ (!("\"" | "'") ~ ANY)* ~ ("\"" | "'") }
+quoted_doc_word = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 
 // Commands (visible parts)
 cmd_a = { ("{" ~ bracketed_doc_word ~ "}") | doc_word }

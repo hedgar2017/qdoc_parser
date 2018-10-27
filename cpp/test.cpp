@@ -127,8 +127,6 @@
 
     \unicode DEAD
 
-    Some text with a quoted command '\class'
-    Some text with a quoted command '\\class'
     Some text with a quoted command "\class"
     Some text with a quoted command "\\class"
     Some text with a quoted\\quoted command "c:\windows\data"
