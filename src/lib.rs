@@ -8,11 +8,13 @@ extern crate pest_derive;
 extern crate rayon;
 #[macro_use]
 extern crate failure;
+extern crate percent_encoding;
 
 use std::{collections::HashMap, fs};
 
 use pest::Parser;
 use rayon::prelude::*;
+use percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 
 use error::Error;
 use entry::{QDocEntry, QDocItem, QDocEnum};
@@ -116,6 +118,9 @@ impl QDocParser {
                                                 _ => (),
                                             }
                                         }
+                                        if desc == "" {
+                                            desc = name;
+                                        }
                                         rustdoc_lines.push(format!("![{}]({})\n\n", desc, name));
                                     },
                                     Rule::cmd_inmodule => entry.module = Some(command.as_span().as_str().trim().to_owned()),
@@ -129,16 +134,17 @@ impl QDocParser {
                                             match part.as_rule() {
                                                 Rule::link_page => _page = part.as_span().as_str().trim(),
                                                 Rule::link_target_single | Rule::link_target_multi => target = part.as_span().as_str().trim(),
-                                                Rule::link_name_single | Rule::link_name_multi => text = part.as_span().as_str().trim(),
+                                                Rule::link_name_multi => text = part.as_span().as_str().trim(),
                                                 _ => (),
                                             }
                                         }
                                         if text == "" {
                                             text = target;
                                         }
+                                        let target = utf8_percent_encode(target, DEFAULT_ENCODE_SET);
                                         rustdoc_lines.push(format!("[{}]({})\n", text, target));
                                     },
-                                    Rule::cmd_li | Rule::cmd_o => rustdoc_lines.push(format!("*")),
+                                    Rule::cmd_li | Rule::cmd_o => rustdoc_lines.push(format!("* {}\n", command.as_span().as_str().trim())),
                                     Rule::cmd_macos => rustdoc_lines.push(format!("MacOS")),
                                     Rule::cmd_macro => entry.data = QDocItem::Macro(command.as_span().as_str().trim().to_owned()),
                                     Rule::cmd_namespace => entry.namespace = Some(command.as_span().as_str().trim().to_owned()),
@@ -172,7 +178,7 @@ impl QDocParser {
                                     Rule::cmd_unicode => {
                                         let word = command.into_inner().next().expect(&format!("\\unicode word next() panic: {}", command_text));
                                         match word.as_rule() {
-                                            Rule::doc_word | Rule::bracketed_doc_word => rustdoc_lines.push(format!("\\u{}", word.as_span().as_str().trim())),
+                                            Rule::doc_word | Rule::bracketed_doc_word => rustdoc_lines.push(format!("&#x{};", word.as_span().as_str().trim())),
                                             _ => (),
                                         }
                                     },

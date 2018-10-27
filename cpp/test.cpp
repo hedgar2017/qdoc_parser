@@ -117,7 +117,6 @@
     \l {assertions} {assertions}
     \l QWidget
     \l QWidget::sizeHint()
-    \l QWidget::removeAction(QAction* action)
     \l <QtGlobal>
     \l widgets/wiggly
     \l {QWidget Class Reference}

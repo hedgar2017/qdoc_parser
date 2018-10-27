@@ -17,9 +17,9 @@ fn print_doc_comments<W: Write>(dest: &mut W, text: &String, indent: usize) {
 		}
 
         if line.len() > 1 {
-            writeln!(dest, "/// {}", &line[1..]);
+            writeln!(dest, "/// {}", line.trim());
         } else {
-            writeln!(dest, "///");
+            writeln!(dest, "/// ");
         }
     }
 }
