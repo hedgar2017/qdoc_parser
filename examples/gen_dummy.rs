@@ -9,19 +9,19 @@ use qdoc_parser::entry::QDocItem;
 use qdoc_parser::QDocParser;
 
 fn print_doc_comments<W: Write>(dest: &mut W, text: &String, indent: usize) {
-	let lines = text.split("\n");
+    let lines = text.split("\n");
 
-	for line in lines {
-		if line.len() > 1 {
-			for _ in 0..indent {
-				write!(dest, " ").unwrap();
-			}
+    for line in lines {
+        if line.len() > 1 {
+            for _ in 0..indent {
+                write!(dest, " ").unwrap();
+            }
 
-			writeln!(dest, "/// {}", &line[1..]);
-		} else {
-			writeln!(dest, "///");
-		}
-	}
+            writeln!(dest, "/// {}", &line[1..]);
+        } else {
+            writeln!(dest, "///");
+        }
+    }
 }
 
 fn main() {
@@ -32,55 +32,58 @@ fn main() {
             .unwrap_or(&"cpp/example.cpp".to_owned()),
     ]);
 
-	let mut file_count = 0;
+    let mut file_count = 0;
 
     for (_path, result) in info {
-		let mut func_count = 0;
+        let mut func_count = 0;
 
-    	let t = result.unwrap();
-    	let target_name = format!("data/dummy_crate/src/file_{}.rs", file_count);
-		let mut target = BufWriter::new(File::create(target_name).unwrap());
+        let t = result.unwrap();
+        let target_name = format!("data/dummy_crate/src/file_{}.rs", file_count);
+        let mut target = BufWriter::new(File::create(target_name).unwrap());
 
-		// Find class data and output that first if we have any
+        // Find class data and output that first if we have any
 
-		for entry in &t.0 {
-			match entry.data {
-				QDocItem::Class(_) => {
-					print_doc_comments(&mut target, &entry.rustdoc_text, 0);
-					break;
-				}
+        for entry in &t.0 {
+            match entry.data {
+                QDocItem::Class(_) => {
+                    print_doc_comments(&mut target, &entry.rustdoc_text, 0);
+                    break;
+                }
 
-				_ => (),
-			}
-		}
+                _ => (),
+            }
+        }
 
-		writeln!(target, "pub struct Dummy{};\n", file_count).unwrap();
-		writeln!(target, "impl Dummy{} {{", file_count).unwrap();
+        writeln!(target, "pub struct Dummy{};\n", file_count).unwrap();
+        writeln!(target, "impl Dummy{} {{", file_count).unwrap();
 
-		for entry in &t.0 {
-			match entry.data {
-				QDocItem::Function(_) => {
-					print_doc_comments(&mut target, &entry.rustdoc_text, 4);
-					writeln!(target, "    pub fn func_{}() -> usize {{ {} }}", func_count, func_count).unwrap();
-				}
+        for entry in &t.0 {
+            match entry.data {
+                QDocItem::Function(_) => {
+                    print_doc_comments(&mut target, &entry.rustdoc_text, 4);
+                    writeln!(
+                        target,
+                        "    pub fn func_{}() -> usize {{ {} }}",
+                        func_count, func_count
+                    ).unwrap();
+                }
 
-				_ => (),
-			}
+                _ => (),
+            }
 
-			func_count += 1;
-		}
+            func_count += 1;
+        }
 
-		writeln!(target, "}}").unwrap();
+        writeln!(target, "}}").unwrap();
 
-		file_count += 1;
+        file_count += 1;
     }
 
     // Generate main output
 
-	let mut target = BufWriter::new(File::create("data/dummy_crate/src/lib.rs").unwrap());
+    let mut target = BufWriter::new(File::create("data/dummy_crate/src/lib.rs").unwrap());
 
-	for i in 0..file_count {
-		writeln!(target, "pub mod file_{};", i);
-	}
+    for i in 0..file_count {
+        writeln!(target, "pub mod file_{};", i);
+    }
 }
-
