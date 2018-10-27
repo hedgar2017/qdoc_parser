@@ -48,7 +48,9 @@
     licence lines
     \endlegalese
 
-    \macos \note Note
+    \macos \note A Mega
+    Ultra multiline note
+    with some useless text
 
     \newcode
         int main(int argc, char *argv[])
@@ -90,7 +92,9 @@
 
     \variable Variable
 
-    \warning Warning, intruder!
+    \warning A Mega
+    Ultra multiline warning
+    with some useless text
 
     \sa removeAction(), QMenu,
         addAction(), QWidget,

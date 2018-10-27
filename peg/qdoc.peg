@@ -38,7 +38,7 @@ cmd_l = {
 }
 cmd_legalese = { (!"\\endlegalese" ~ ANY)* }
 cmd_macos = { "\\macos" }
-cmd_note = { (!newline ~ ANY)* }
+cmd_note = { (!("\\" | doc_end | newline{2}) ~ ANY)* }
 cmd_overload = { (!newline ~ ANY)* }
 cmd_property = { printable+ }
 cmd_sa = { sa_link ~ ("," ~ newline* ~ sa_link)* }
@@ -50,17 +50,20 @@ cmd_uicontrol = { doc_word }
 cmd_underline = { (!"}" ~ ANY)* ~ SPACE_SEPARATOR* }
 cmd_value = { enum_value_key ~ newline? ~ enum_value_description? }
 cmd_variable = { printable+ }
-cmd_warning = { (!newline ~ ANY)* }
+cmd_warning = { (!("\\" | doc_end | newline{2}) ~ ANY)* }
 
 // ignored
 cmd_badcode = { (!"\\endcode" ~ ANY)* }
 cmd_deprecated = { (!newline ~ ANY)* }
 cmd_div = { (!"\\enddiv" ~ ANY)* }
+cmd_endlist = { (!newline ~ ANY)* }
 cmd_header = { (!newline ~ ANY)* }
 cmd_headerfile = { (!newline ~ ANY)* }
 cmd_include = { (!newline ~ ANY)* }
 cmd_index = { (!newline ~ ANY)* }
+cmd_ingroup = { (!newline ~ ANY)* }
 cmd_internal = { "\\internal" }
+cmd_list = { (!newline ~ ANY)* }
 cmd_newcode = { (!"\\endcode" ~ ANY)* }
 cmd_obsolete = { (!newline ~ ANY)* }
 cmd_omit = { (!"\\endomit" ~ ANY)* }
@@ -100,64 +103,66 @@ enum_value_description = { SPACE_SEPARATOR* ~ (!newline ~ doc_word ~ SPACE_SEPAR
 
 command = {
     ("\\a" ~ SPACE_SEPARATOR* ~ cmd_a) |
+    ("\\badcode" ~ cmd_badcode ~ "\\endcode") |
     ("\\brief" ~ SPACE_SEPARATOR* ~ cmd_brief ~ &("\\" | doc_end | newline{2})) |
     ("\\b" ~ SPACE_SEPARATOR* ~ "{" ~ cmd_b ~ "}") |
     ("\\class" ~ SPACE_SEPARATOR* ~ cmd_class ~ newline) |
     ("\\codeline" ~ SPACE_SEPARATOR* ~ cmd_codeline ~ newline) |
     ("\\code" ~ SPACE_SEPARATOR* ~ cmd_code ~ "\\endcode") |
     ("\\c" ~ SPACE_SEPARATOR* ~ cmd_c) |
+    ("\\deprecated" ~ cmd_deprecated ~ newline) |
+    ("\\div" ~ cmd_div ~ "\\enddiv") |
     (cmd_dots) |
+    ("\\endtable" ~ cmd_endtable ~ newline) |
+    ("\\endlist" ~ cmd_endlist ~ newline) |
     ("\\enum" ~ SPACE_SEPARATOR* ~ cmd_enum ~ newline) |
     ("\\e" ~ SPACE_SEPARATOR* ~ "{" ~ cmd_e ~ "}") |
     ("\\fn" ~ SPACE_SEPARATOR* ~ cmd_fn ~ newline) |
     ("\\gui" ~ SPACE_SEPARATOR* ~ "{" ~ cmd_gui ~ "}") |
+    ("\\header" ~ cmd_header ~ newline) |
+    ("\\headerfile" ~ cmd_headerfile ~ newline) |
     ("\\image" ~ SPACE_SEPARATOR* ~ cmd_image ~ newline) |
     ("\\inlineimage" ~ SPACE_SEPARATOR* ~ cmd_inlineimage ~ newline) |
+    ("\\include" ~ cmd_include ~ newline) |
+    ("\\ingroup" ~ cmd_ingroup ~ newline) |
     ("\\inmodule" ~ SPACE_SEPARATOR* ~ cmd_inmodule ~ newline) |
+    ("\\index" ~ cmd_index ~ newline) |
+    (cmd_internal) |
     ("\\legalese" ~ SPACE_SEPARATOR* ~ cmd_legalese ~ "\\endlegalese") |
+    ("\\list" ~ cmd_list ~ newline) |
     (cmd_li) |
     ("\\l" ~ SPACE_SEPARATOR* ~ cmd_l ~ newline) |
     (cmd_macos) |
-    ("\\note" ~ SPACE_SEPARATOR* ~ cmd_note ~ newline) |
+    ("\\newcode" ~ cmd_newcode ~ "\\endcode") |
+    ("\\note" ~ SPACE_SEPARATOR* ~ cmd_note ~ &("\\" | doc_end | newline{2})) |
+    ("\\obsolete" ~ cmd_obsolete ~ newline) |
+    ("\\omit" ~ cmd_omit ~ "\\endomit") |
     ("\\overload" ~ SPACE_SEPARATOR* ~ cmd_overload ~ newline) |
+    ("\\preliminary" ~ cmd_preliminary ~ newline) |
     ("\\property" ~ SPACE_SEPARATOR* ~ cmd_property ~ newline) |
+    ("\\page" ~ cmd_page ~ newline) |
+    ("\\quotefile" ~ cmd_quotefile ~ newline) |
+    ("\\reentrant" ~ cmd_reentrant ~ newline) |
+    ("\\relates" ~ cmd_relates ~ newline) |
+    (cmd_reimp) |
+    ("\\row" ~ cmd_row ~ newline) |
     ("\\section1" ~ SPACE_SEPARATOR* ~ cmd_section1 ~ newline) |
     ("\\section2" ~ SPACE_SEPARATOR* ~ cmd_section2 ~ newline) |
     ("\\section3" ~ SPACE_SEPARATOR* ~ cmd_section3 ~ newline) |
     ("\\section4" ~ SPACE_SEPARATOR* ~ cmd_section4 ~ newline) |
     ("\\sa" ~ SPACE_SEPARATOR* ~ cmd_sa ~ newline) |
+    ("\\since" ~ cmd_since ~ newline) |
+    ("\\snippet" ~ cmd_snippet ~ newline) |
+    ("\\tableofcontents" ~ cmd_tableofcontents ~ newline) |
+    ("\\table" ~ cmd_table ~ newline) |
+    ("\\target" ~ cmd_target ~ newline) |
+    ("\\threadsafe" ~ cmd_threadsafe ~ newline) |
+    ("\\typedef" ~ cmd_typedef ~ newline) |
     ("\\uicontrol" ~ SPACE_SEPARATOR* ~ cmd_uicontrol) |
     ("\\underline" ~ SPACE_SEPARATOR* ~ "{" ~ cmd_underline ~ "}") |
     ("\\value" ~ SPACE_SEPARATOR* ~ cmd_value) |
     ("\\variable" ~ SPACE_SEPARATOR* ~ cmd_variable ~ newline) |
-    ("\\warning" ~ SPACE_SEPARATOR* ~ cmd_warning ~ newline) |
-
-    ("\\badcode" ~ cmd_badcode ~ "\\endcode") |
-    ("\\deprecated" ~ cmd_deprecated ~ newline) |
-    ("\\div" ~ cmd_div ~ "\\enddiv") |
-    ("\\header" ~ cmd_header ~ newline) |
-    ("\\headerfile" ~ cmd_headerfile ~ newline) |
-    ("\\include" ~ cmd_include ~ newline) |
-    ("\\index" ~ cmd_index ~ newline) |
-    (cmd_internal) |
-    ("\\newcode" ~ cmd_newcode ~ "\\endcode") |
-    ("\\obsolete" ~ cmd_obsolete ~ newline) |
-    ("\\omit" ~ cmd_omit ~ "\\endomit") |
-    ("\\page" ~ cmd_page ~ newline) |
-    ("\\quotefile" ~ cmd_quotefile ~ newline) |
-    ("\\reentrant" ~ cmd_reentrant ~ newline) |
-    ("\\relates" ~ cmd_relates ~ newline) |
-    ("\\row" ~ cmd_row ~ newline) |
-    ("\\preliminary" ~ cmd_preliminary ~ newline) |
-    (cmd_reimp) |
-    ("\\since" ~ cmd_since ~ newline) |
-    ("\\snippet" ~ cmd_snippet ~ newline) |
-    ("\\table" ~ cmd_table ~ newline) |
-    ("\\endtable" ~ cmd_endtable ~ newline) |
-    ("\\tableofcontents" ~ cmd_tableofcontents ~ newline) |
-    ("\\target" ~ cmd_target ~ newline) |
-    ("\\threadsafe" ~ cmd_threadsafe ~ newline) |
-    ("\\typedef" ~ cmd_typedef ~ newline)
+    ("\\warning" ~ SPACE_SEPARATOR* ~ cmd_warning ~ &("\\" | doc_end | newline{2}))
 }
 
 // Lines
