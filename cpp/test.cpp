@@ -108,10 +108,13 @@
     \section4 Bye Qt
     This is the fourth subsubsection.
 
+    \list
     \li Basic Qt
     \li Getting Started
-    \li Hello Qt
-    \li Bye Qt
+    \li \e Hello Qt
+    \li \c Bye Qt
+    \li
+    \endlist
 
     \l [PAGE] {http://google.com} {Google}
     \l {assertions} {assertions}

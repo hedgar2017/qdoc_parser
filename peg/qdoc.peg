@@ -35,7 +35,7 @@ cmd_image = { image_name ~ (SPACE_SEPARATOR* ~ image_description)? }
 cmd_inlineimage = { image_name ~ (SPACE_SEPARATOR* ~ image_description)? }
 cmd_inmodule = { identifier_symbol+ }
 cmd_keyword = { "\\keyword" }
-cmd_li = { (!(command_begin | doc_end | newline{2}) ~ ANY)* }
+cmd_li = { (!("\\li" | "\\endlist" | "\\row" | "\\endtable") ~ WHITE_SPACE* ~ (command | doc_word) ~ WHITE_SPACE*)* }
 cmd_l = {
     ("[" ~ link_page ~ "]")? ~ (
         (WHITE_SPACE* ~ ("{" ~ link_target_multi ~ "}") ~ WHITE_SPACE* ~ ("{" ~ link_name_multi ~ "}")?) |
@@ -160,7 +160,7 @@ command = {
         (cmd_keyword) |
         ("\\legalese" ~ SPACE_SEPARATOR* ~ cmd_legalese ~ "\\endlegalese") |
         ("\\list" ~ cmd_list ~ newline) |
-        ("\\li" ~ SPACE_SEPARATOR* ~ cmd_li ~ &(command_begin | doc_end | newline{2})) |
+        ("\\li" ~ WHITE_SPACE* ~ cmd_li ~ WHITE_SPACE*) |
         ("\\l" ~ SPACE_SEPARATOR* ~ cmd_l ~ SPACE_SEPARATOR*) |
         (cmd_macos) |
         ("\\macro" ~ SPACE_SEPARATOR* ~ cmd_macro ~ newline) |

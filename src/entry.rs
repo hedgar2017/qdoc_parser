@@ -39,12 +39,13 @@ pub struct QDocEntry {
     pub brief: Option<String>,
     pub data: QDocItem,
     pub qdoc_text: String,
-    pub rustdoc_text: String,
+    pub rustdoc_elements: Vec<String>,
 }
 
 impl QDocEntry {
     pub fn formatted_rustdoc(&self) -> String {
-        let mut lines = self.rustdoc_text.lines().map(|line| line.trim()).collect::<Vec<&str>>();
+        let text = self.rustdoc_elements.join(" ");
+        let mut lines = text.lines().map(|line| line.trim()).collect::<Vec<&str>>();
         lines.dedup();
         lines.join("\n")
     }
@@ -59,7 +60,7 @@ impl Default for QDocEntry {
             brief: None,
             data: QDocItem::Undefined,
             qdoc_text: String::new(),
-            rustdoc_text: String::new(),
+            rustdoc_elements: Vec::new(),
         }
     }
 }

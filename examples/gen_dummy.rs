@@ -8,7 +8,7 @@ use std::io::Write;
 use qdoc_parser::entry::QDocItem;
 use qdoc_parser::{QDocParser, QDocFilterable};
 
-fn print_doc_comments<W: Write>(dest: &mut W, text: &String, indent: usize) {
+fn print_doc_comments<W: Write>(dest: &mut W, text: &str, indent: usize) {
     let lines = text.split("\n");
 
     for line in lines {
@@ -59,7 +59,7 @@ fn main() {
         for entry in &t.0 {
             match entry.data {
                 QDocItem::Class(_) => {
-                    print_doc_comments(&mut target, &entry.rustdoc_text, 0);
+                    print_doc_comments(&mut target, &entry.formatted_rustdoc(), 0);
                     break;
                 }
 
@@ -73,7 +73,7 @@ fn main() {
         for entry in &t.0 {
             match entry.data {
                 QDocItem::Function(_) => {
-                    print_doc_comments(&mut target, &entry.rustdoc_text, 4);
+                    print_doc_comments(&mut target, &entry.formatted_rustdoc(), 4);
                     writeln!(
                         target,
                         "    pub fn func_{}() -> usize {{ {} }}",
