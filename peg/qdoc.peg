@@ -49,7 +49,7 @@ cmd_namespace = { identifier_symbol+ }
 cmd_note = { "\\note" }
 cmd_o = { "\\o" }
 cmd_overload = { (!newline ~ ANY)* }
-cmd_param = { (!newline ~ ANY)* }
+cmd_param = { identifier_symbol+ }
 cmd_property = { identifier_symbol+ }
 cmd_return = { "\\return" }
 cmd_sa = { sa_link ~ ("," ~ newline* ~ sa_link)* }
@@ -174,7 +174,7 @@ command = {
         ("\\omit" ~ cmd_omit ~ "\\endomit") |
         ("\\overload" ~ SPACE_SEPARATOR* ~ cmd_overload ~ newline) |
         (cmd_o) |
-        ("\\param" ~ cmd_param ~ newline) |
+        ("\\param" ~ WHITE_SPACE* ~ cmd_param ~ SPACE_SEPARATOR*) |
         ("\\preliminary" ~ cmd_preliminary ~ newline) |
         ("\\printline" ~ cmd_printline ~ newline) |
         ("\\printuntil" ~ cmd_printuntil ~ newline) |

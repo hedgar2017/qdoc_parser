@@ -137,6 +137,9 @@
     \keyword some keyword
 
     \fn void function() const volatile
+
+    \param param1 some param stuff
+    \param param2 another param stuff
     
     QWidgetBackingStoreTracker is a thin wrapper around a \a QWidgetBackingStore pointer,
     which maintains a list of the \b {QWidgets} which are currently using the backing

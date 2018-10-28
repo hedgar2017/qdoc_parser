@@ -8,15 +8,29 @@ extern crate qdoc_parser;
 
 use std::env;
 
-use qdoc_parser::QDocParser;
+use qdoc_parser::{QDocParser, QDocFilterable};
 
 fn main() {
-    let info = QDocParser::parse_files(vec![
+    let filter = |value_data: &str, value_type: QDocFilterable| {
+        use QDocFilterable::*;
+
+        match value_type {
+            Function => format!("FilteredFunction{}", value_data),
+            Overload => format!("FilteredOverload{}", value_data),
+            Parameter => format!("FilteredParameter{}", value_data),
+            LinkName => format!("FilteredLinkName{}", value_data),
+            LinkUrl => format!("FilteredLinkUrl{}", value_data),
+            LinkSeeAlso => format!("FilteredLinkSeeAlso{}", value_data),
+        }
+    };
+
+    let info = QDocParser::new(filter).parse_files(vec![
         env::args()
             .collect::<Vec<String>>()
             .get(1)
             .unwrap_or(&"cpp/example.cpp".to_owned()),
     ]);
+
     for (path, result) in info {
         match result {
             Ok(file) => {

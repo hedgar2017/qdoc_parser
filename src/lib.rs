@@ -22,11 +22,34 @@ use file::QDocFile;
 
 type QDocResult = Result<QDocFile, Error>;
 
+pub enum QDocFilterable {
+    Function,
+    Overload,
+    Parameter,
+    LinkName,
+    LinkUrl,
+    LinkSeeAlso,
+}
+
 #[derive(Parser)]
 #[grammar = "../peg/qdoc.peg"]
-pub struct QDocParser;
+pub struct QDocParser<F>
+    where
+        F: Send + Sync + Fn(&str, QDocFilterable) -> String
+{
+    filter: F,
+}
 
-impl QDocParser {
+impl<F> QDocParser<F>
+    where
+        F: Send + Sync + Fn(&str, QDocFilterable) -> String
+{
+    pub fn new(filter: F) -> Self {
+        Self {
+            filter
+        }
+    }
+
     /// This is the main entry function that does all the work.
     /// paths = directory paths on the local harddrive for a directory of the Qt source code.
     ///        It's expected that all the files are parsed in parallel
@@ -38,20 +61,20 @@ impl QDocParser {
     /// To allow the user to translate them if needed.
     /// If the user returns None the parser should output the data as is.
     ///
-    pub fn parse_files(paths: Vec<&str>) -> HashMap<String, QDocResult> {
+    pub fn parse_files(&self, paths: Vec<&str>) -> HashMap<String, QDocResult> {
         paths
             .par_iter()
-            .map(|path| (path.to_string(), Self::parse_file(path)))
+            .map(|path| (path.to_string(), self.parse_file(path)))
             .collect::<HashMap<String, QDocResult>>()
     }
 
-    fn parse_file(path: &str) -> QDocResult {
+    fn parse_file(&self, path: &str) -> QDocResult {
         let data = fs::read_to_string(path)?;
         let data = match data.chars().last() {
             None => return Ok(QDocFile(Vec::new())),
-            Some('\n') => data.replace("\r\n", "\n"),
-            Some(_) => data.replace("\r\n", "\n") + "\n",
-        };
+            Some('\n') => data,
+            Some(_) => data + "\n",
+        }.replace("\r", "");        
 
         let file = Self::parse(Rule::doc_file, &data)
             .map_err(|error| Error::Parse(error.to_string()))?
@@ -64,12 +87,12 @@ impl QDocParser {
             match record.as_rule() {
                 Rule::doc_entry => {
                     let mut entry = QDocEntry::default();
-                    entry.qdoc_text = record.as_span().as_str().to_owned();
+                    entry.qdoc_text = record.as_span().as_str().trim().to_owned();
 
                     let mut rustdoc_lines = Vec::with_capacity(64);
                     for element in record.into_inner() {
                         match element.as_rule() {
-                            Rule::doc_word => rustdoc_lines.push(element.as_span().as_str().to_owned()),
+                            Rule::doc_word => rustdoc_lines.push(element.as_span().as_str().trim().to_owned()),
                             Rule::command => {
                                 let command = element.into_inner().next().expect("command next() panic");
                                 let command_text = command.as_span().as_str().trim();
@@ -107,7 +130,7 @@ impl QDocParser {
                                         }
                                     },
                                     Rule::cmd_enum => entry.data = QDocItem::Enum(QDocEnum{name: command.as_span().as_str().trim().to_owned(), data: HashMap::new()}),
-                                    Rule::cmd_fn => entry.data = QDocItem::Function(command.as_span().as_str().trim().to_owned()),
+                                    Rule::cmd_fn => entry.data = QDocItem::Function((self.filter)(command.as_span().as_str().trim(), QDocFilterable::Function)),
                                     Rule::cmd_image | Rule::cmd_inlineimage => {
                                         let mut name = "";
                                         let mut desc = "";
@@ -141,24 +164,22 @@ impl QDocParser {
                                         if text == "" {
                                             text = target;
                                         }
-                                        let target = utf8_percent_encode(target, DEFAULT_ENCODE_SET);
-                                        rustdoc_lines.push(format!("[{}]({})\n", text, target));
+                                        let text = (self.filter)(text, QDocFilterable::LinkName);
+                                        let target = (self.filter)(target, QDocFilterable::LinkUrl);
+                                        rustdoc_lines.push(format!("[{}]({})\n", text, utf8_percent_encode(&target, DEFAULT_ENCODE_SET)));
                                     },
                                     Rule::cmd_li | Rule::cmd_o => rustdoc_lines.push(format!("* {}\n", command.as_span().as_str().trim())),
                                     Rule::cmd_macos => rustdoc_lines.push(format!("MacOS")),
                                     Rule::cmd_macro => entry.data = QDocItem::Macro(command.as_span().as_str().trim().to_owned()),
                                     Rule::cmd_namespace => entry.namespace = Some(command.as_span().as_str().trim().to_owned()),
                                     Rule::cmd_note => rustdoc_lines.push(format!("**Note**:")),
-                                    Rule::cmd_overload => (),
-                                    Rule::cmd_param => (),
+                                    Rule::cmd_overload => rustdoc_lines.push(format!("**Overloads** {}", (self.filter)(command.as_span().as_str().trim(), QDocFilterable::Overload))),
+                                    Rule::cmd_param => rustdoc_lines.push(format!("**Parameter** {}", (self.filter)(command.as_span().as_str().trim(), QDocFilterable::Parameter))),
                                     Rule::cmd_property => entry.data = QDocItem::Property(command.as_span().as_str().trim().to_owned()),
                                     Rule::cmd_return => rustdoc_lines.push(format!("**Returns**")),
-                                    Rule::cmd_sa => {
-                                        for part in command.into_inner() {
-                                            match part.as_rule() {
-                                                Rule::sa_link => rustdoc_lines.push(format!("{}\n", part.as_span().as_str())),
-                                                _ => (),
-                                            }
+                                    Rule::cmd_sa => for part in command.into_inner() {
+                                        if let Rule::sa_link = part.as_rule() {
+                                            rustdoc_lines.push(format!("{}\n", (self.filter)(part.as_span().as_str().trim(), QDocFilterable::LinkSeeAlso)));
                                         }
                                     },
                                     Rule::cmd_section1 => rustdoc_lines.push(format!("# {}\n", command.as_span().as_str().trim())),
@@ -205,7 +226,7 @@ impl QDocParser {
                             Rule::newline => rustdoc_lines.push("\n".to_string()),
                             Rule::function_line => {
                                 if let QDocItem::Undefined = entry.data {
-                                    entry.data = QDocItem::Function(element.as_span().as_str().trim().to_owned());
+                                    entry.data = QDocItem::Function((self.filter)(element.as_span().as_str().trim(), QDocFilterable::Function));
                                 }
                             }
                             _ => (),
