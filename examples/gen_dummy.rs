@@ -6,15 +6,15 @@ use std::io::BufWriter;
 use std::io::Write;
 
 use qdoc_parser::entry::QDocItem;
-use qdoc_parser::{QDocParser, QDocFilterable};
+use qdoc_parser::{QDocFilterable, QDocParser};
 
 fn print_doc_comments<W: Write>(dest: &mut W, text: &str, indent: usize) {
     let lines = text.split("\n");
 
     for line in lines {
-		for _ in 0..indent {
-			write!(dest, " ").unwrap();
-		}
+        for _ in 0..indent {
+            write!(dest, " ").unwrap();
+        }
 
         if line.len() > 1 {
             writeln!(dest, "/// {}", line.trim());

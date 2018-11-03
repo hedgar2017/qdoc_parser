@@ -8,7 +8,7 @@ extern crate qdoc_parser;
 
 use std::env;
 
-use qdoc_parser::{QDocParser, QDocFilterable};
+use qdoc_parser::{QDocFilterable, QDocParser};
 
 fn main() {
     let filter = |value_data: &str, value_type: QDocFilterable| {

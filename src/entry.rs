@@ -2,10 +2,7 @@
 //! The QDoc entry module
 //!
 
-use std::{
-    fmt,
-    collections::HashMap,
-};
+use std::{collections::HashMap, fmt};
 
 #[derive(Debug)]
 pub struct QDocEnum {
@@ -94,7 +91,7 @@ impl fmt::Display for QDocEntry {
                     writeln!(f, "      {}: {}", key, description);
                 }
                 Ok(())
-            },
+            }
             _ => Ok(()),
         };
         writeln!(f, "\nQDoc:");
