@@ -141,7 +141,9 @@ where
                                 if let Rule::cmd_internal = command.as_rule() {
                                     continue 'record;
                                 }
-                                self.process_element(command, &mut entry);
+                                if let Some(data) = self.process_element(command, &mut entry) {
+                                    entry.rustdoc_elements.push(data.to_owned());
+                                }
                             }
                             Rule::newline => entry.rustdoc_elements.push("\n".to_string()),
                             Rule::function_line => {
@@ -163,7 +165,7 @@ where
         Ok(QDocFile(entries))
     }
 
-    fn process_element(&self, command: Pair<'_, Rule>, entry: &mut QDocEntry) {
+    fn process_element(&self, command: Pair<'_, Rule>, entry: &mut QDocEntry) -> Option<String> {
         let command_text = command.as_span().as_str().trim();
         match command.as_rule() {
             Rule::cmd_a => {
@@ -171,24 +173,16 @@ where
                     .into_inner()
                     .next()
                     .expect(&format!("\\a word next() panic: {}", command_text));
-                match word.as_rule() {
-                    Rule::doc_word | Rule::bracketed_doc_word => entry
-                        .rustdoc_elements
-                        .push(format!("*{}*", word.as_span().as_str().trim())),
-                    _ => (),
-                }
+                let data = format!("**{}**", word.as_span().as_str().trim());
+                return Some(data);
             }
             Rule::cmd_b | Rule::cmd_gui | Rule::cmd_underline => {
                 let word = command
                     .into_inner()
                     .next()
                     .expect(&format!("\\b word next() panic: {}", command_text));
-                match word.as_rule() {
-                    Rule::doc_word | Rule::bracketed_doc_word => entry
-                        .rustdoc_elements
-                        .push(format!("**{}**", word.as_span().as_str().trim())),
-                    _ => (),
-                }
+                let data = format!("**{}**", word.as_span().as_str().trim());
+                return Some(data);
             }
             Rule::cmd_brief => entry.brief = Some(command.as_span().as_str().trim().to_owned()),
             Rule::cmd_c => {
@@ -196,36 +190,55 @@ where
                     .into_inner()
                     .next()
                     .expect(&format!("\\c word next() panic: {}", command_text));
-                match word.as_rule() {
-                    Rule::doc_word | Rule::bracketed_doc_word => entry
-                        .rustdoc_elements
-                        .push(format!("`{}`", word.as_span().as_str().trim())),
-                    _ => (),
-                }
+                let data = format!("`{}`", word.as_span().as_str().trim());
+                return Some(data);
             }
-            Rule::cmd_code | Rule::cmd_legalese => entry.rustdoc_elements.push(format!(
-                "```\n    {} \n ```\n",
-                command.as_span().as_str().trim()
-            )),
+            Rule::cmd_code | Rule::cmd_legalese => {
+                let data = format!(
+                    "```\n    {} \n ```\n",
+                    command.as_span().as_str().trim()
+                );
+                return Some(data);
+            },
             Rule::cmd_class => {
                 entry.data = QDocItem::Class(command.as_span().as_str().trim().to_owned())
             }
-            Rule::cmd_dots => entry.rustdoc_elements.push(format!("...")),
+            Rule::cmd_dots => return Some(format!("...")),
             Rule::cmd_e => {
                 let word = command
                     .into_inner()
                     .next()
                     .expect(&format!("\\e word next() panic: {}", command_text));
-                match word.as_rule() {
-                    Rule::doc_word | Rule::bracketed_doc_word => entry
-                        .rustdoc_elements
-                        .push(format!("*{}*", word.as_span().as_str().trim())),
-                    _ => (),
-                }
+                let data = format!("*{}*", word.as_span().as_str().trim());
+                return Some(data);
             }
             Rule::cmd_enum => {
+                let mut name = "";
+                let mut description = Vec::new();
+                for part in command.into_inner() {
+                    match part.as_rule() {
+                        Rule::enum_name => name = part.as_span().as_str().trim(),
+                        Rule::enum_description => {
+                            for element in part.into_inner() {
+                                match element.as_rule() {
+                                    Rule::doc_word => description.push(element.as_span().as_str().trim().to_owned()),
+                                    Rule::command => {
+                                        let command =
+                                            element.into_inner().next().expect("command next() panic");
+                                        if let Some(text) = self.process_element(command, entry) {
+                                            description.push(text);
+                                        }
+                                    }
+                                    _ => (),
+                                }
+                            }
+                        },
+                        _ => (),
+                    }
+                }
                 entry.data = QDocItem::Enum(QDocEnum {
-                    name: command.as_span().as_str().trim().to_owned(),
+                    name: name.to_owned(),
+                    description: description.join(" "),
                     data: HashMap::new(),
                 })
             }
@@ -248,12 +261,10 @@ where
                 if desc == "" {
                     desc = name;
                 }
-                entry
-                    .rustdoc_elements
-                    .push(format!("![{}]({})\n\n", desc, name));
+                return Some(format!("![{}]({})\n\n", desc, name));
             }
             Rule::cmd_inmodule => entry.module = Some(command.as_span().as_str().trim().to_owned()),
-            Rule::cmd_keyword => entry.rustdoc_elements.push(format!("**Keyword**:")),
+            Rule::cmd_keyword => return Some(format!("**Keyword**:")),
             Rule::cmd_l => {
                 let mut _page = "";
                 let mut target = "";
@@ -273,11 +284,12 @@ where
                 }
                 let text = (self.filter)(text, QDocFilterable::LinkName);
                 let target = (self.filter)(target, QDocFilterable::LinkUrl);
-                entry.rustdoc_elements.push(format!(
+                let data = format!(
                     "[{}]({})\n",
                     text,
                     utf8_percent_encode(&target, DEFAULT_ENCODE_SET)
-                ));
+                );
+                return Some(data);
             }
             Rule::cmd_li | Rule::cmd_o => {
                 entry.rustdoc_elements.push(format!("*"));
@@ -296,26 +308,28 @@ where
                 }
                 entry.rustdoc_elements.push(format!("\n"));
             }
-            Rule::cmd_macos => entry.rustdoc_elements.push(format!("MacOS")),
+            Rule::cmd_macos => {
+                return Some("MacOS".to_string());
+            },
             Rule::cmd_macro => {
                 entry.data = QDocItem::Macro(command.as_span().as_str().trim().to_owned())
             }
             Rule::cmd_namespace => {
                 entry.namespace = Some(command.as_span().as_str().trim().to_owned())
             }
-            Rule::cmd_note => entry.rustdoc_elements.push(format!("**Note**:")),
-            Rule::cmd_overload => entry.rustdoc_elements.push(format!(
+            Rule::cmd_note => return Some(format!("**Note**:")),
+            Rule::cmd_overload => return Some(format!(
                 "**Overloads** {}",
                 (self.filter)(command.as_span().as_str().trim(), QDocFilterable::Overload)
             )),
-            Rule::cmd_param => entry.rustdoc_elements.push(format!(
+            Rule::cmd_param => return Some(format!(
                 "**Parameter** {}",
                 (self.filter)(command.as_span().as_str().trim(), QDocFilterable::Parameter)
             )),
             Rule::cmd_property => {
                 entry.data = QDocItem::Property(command.as_span().as_str().trim().to_owned())
             }
-            Rule::cmd_return => entry.rustdoc_elements.push(format!("**Returns**")),
+            Rule::cmd_return => return Some(format!("**Returns**")),
             Rule::cmd_sa => {
                 entry.rustdoc_elements.push(format!("**See also:**"));
                 for part in command.into_inner() {
@@ -330,73 +344,65 @@ where
                     }
                 }
             }
-            Rule::cmd_section1 => entry
-                .rustdoc_elements
-                .push(format!("# {}\n", command.as_span().as_str().trim())),
-            Rule::cmd_section2 => entry
-                .rustdoc_elements
-                .push(format!("## {}\n", command.as_span().as_str().trim())),
-            Rule::cmd_section3 => entry
-                .rustdoc_elements
-                .push(format!("### {}\n", command.as_span().as_str().trim())),
-            Rule::cmd_section4 => entry
-                .rustdoc_elements
-                .push(format!("#### {}\n", command.as_span().as_str().trim())),
+            Rule::cmd_section1 => return Some(format!("# {}\n", command.as_span().as_str().trim())),
+            Rule::cmd_section2 => return Some(format!("## {}\n", command.as_span().as_str().trim())),
+            Rule::cmd_section3 => return Some(format!("### {}\n", command.as_span().as_str().trim())),
+            Rule::cmd_section4 => return Some(format!("#### {}\n", command.as_span().as_str().trim())),
             Rule::cmd_struct => {
                 entry.data = QDocItem::Struct(command.as_span().as_str().trim().to_owned())
             }
-            Rule::cmd_sup => entry
-                .rustdoc_elements
-                .push(format!("^{}", command.as_span().as_str().trim())),
+            Rule::cmd_sup => return Some(format!("^{}", command.as_span().as_str().trim())),
             Rule::cmd_title => entry.title = Some(command.as_span().as_str().trim().to_owned()),
             Rule::cmd_tt => {
                 let word = command
                     .into_inner()
                     .next()
                     .expect(&format!("\\tt word next() panic: {}", command_text));
-                match word.as_rule() {
-                    Rule::doc_word | Rule::bracketed_doc_word => entry
-                        .rustdoc_elements
-                        .push(format!("`{}`", word.as_span().as_str().trim())),
-                    _ => (),
-                }
+                return Some(format!("`{}`", word.as_span().as_str().trim().to_owned()));
             }
             Rule::cmd_unicode => {
                 let word = command
                     .into_inner()
                     .next()
                     .expect(&format!("\\unicode word next() panic: {}", command_text));
-                match word.as_rule() {
-                    Rule::doc_word | Rule::bracketed_doc_word => entry
-                        .rustdoc_elements
-                        .push(format!("&#x{};", word.as_span().as_str().trim())),
-                    _ => (),
-                }
+                let data = format!("&#x{};", word.as_span().as_str().trim());
+                return Some(data);
             }
-            Rule::cmd_uicontrol => entry
-                .rustdoc_elements
-                .push(format!("**{}**", command.as_span().as_str().trim())),
+            Rule::cmd_uicontrol => return Some(format!("**{}**", command.as_span().as_str().trim())),
             Rule::cmd_value => {
                 let mut key = "";
-                let mut description = "";
+                let mut description = Vec::new();
                 for part in command.into_inner() {
                     match part.as_rule() {
                         Rule::enum_value_key => key = part.as_span().as_str().trim(),
                         Rule::enum_value_description => {
-                            description = part.as_span().as_str().trim()
+                            for element in part.into_inner() {
+                                match element.as_rule() {
+                                    Rule::doc_word => description.push(element.as_span().as_str().trim().to_owned()),
+                                    Rule::command => {
+                                        let command =
+                                            element.into_inner().next().expect("command next() panic");
+                                        if let Some(text) = self.process_element(command, entry) {
+                                            description.push(text);
+                                        }
+                                    }
+                                    _ => (),
+                                }
+                            }
                         }
                         _ => (),
                     }
                 }
                 if let QDocItem::Enum(ref mut value) = entry.data {
-                    value.data.insert(key.to_owned(), description.to_owned());
+                    value.data.insert(key.to_owned(), description.join(" "));
                 }
             }
             Rule::cmd_variable => {
                 entry.data = QDocItem::Variable(command.as_span().as_str().trim().to_owned())
             }
-            Rule::cmd_warning => entry.rustdoc_elements.push(format!("**Warning**:")),
+            Rule::cmd_warning => return Some(format!("**Warning**:")),
             _ => (),
-        }
+        };
+        None
     }
 }
