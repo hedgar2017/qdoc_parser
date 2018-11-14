@@ -28,7 +28,7 @@ cmd_class = { identifier_symbol+ }
 cmd_code = { (!"\\endcode" ~ ANY)* }
 cmd_dots = { "\\dots" }
 cmd_e = { ("{" ~ bracketed_doc_word ~ "}") | doc_word }
-cmd_enum = { identifier_symbol+ }
+cmd_enum = { enum_name ~ (WHITE_SPACE* ~ enum_description)? }
 cmd_fn = { (!newline ~ ANY)+ }
 cmd_gui = { ("{" ~ bracketed_doc_word ~ "}") | doc_word }
 cmd_image = { image_name ~ (SPACE_SEPARATOR* ~ image_description)? }
@@ -59,6 +59,7 @@ cmd_section1 = { (!newline ~ ANY)* }
 cmd_section2 = { (!newline ~ ANY)* }
 cmd_section3 = { (!newline ~ ANY)* }
 cmd_section4 = { (!newline ~ ANY)* }
+cmd_span = { ("{" ~ bracketed_doc_word ~ "}") ~ WHITE_SPACE* ~ ("{" ~ bracketed_doc_word ~ "}") }
 cmd_title = { (!newline ~ ANY)+ }
 cmd_tt = { ("{" ~ bracketed_doc_word ~ "}") | doc_word }
 cmd_uicontrol = { doc_word }
@@ -123,9 +124,13 @@ link_target_single = { doc_word }
 link_target_multi = { bracketed_doc_word }
 link_name_multi = { bracketed_doc_word }
 
+// enum decomposition
+enum_name = { identifier_symbol+ }
+enum_description = { WHITE_SPACE* ~ (!"\\value" ~ (doc_word | command) ~ WHITE_SPACE*)+ }
+
 // enum value decomposition
 enum_value_key = { doc_word }
-enum_value_description = { SPACE_SEPARATOR* ~ (!newline ~ doc_word ~ SPACE_SEPARATOR*)+ }
+enum_value_description = { SPACE_SEPARATOR* ~ (!("\\value" | "\\omitvalue" | "\\sa" | "\\note" | "\\since" | "\\span" | "\\snippet") ~ (doc_word | command) ~ WHITE_SPACE*)+ }
 
 command = {
     !not_a_command ~ (
@@ -142,7 +147,7 @@ command = {
         (cmd_dots) |
         ("\\endtable" ~ cmd_endtable ~ newline) |
         ("\\endlist" ~ cmd_endlist ~ newline) |
-        ("\\enum" ~ SPACE_SEPARATOR* ~ cmd_enum ~ newline) |
+        ("\\enum" ~ SPACE_SEPARATOR* ~ cmd_enum) |
         ("\\e" ~ WHITE_SPACE* ~ cmd_e) |
         ("\\fn" ~ SPACE_SEPARATOR* ~ cmd_fn ~ newline) |
         ("\\group" ~ cmd_group ~ newline) |
@@ -197,6 +202,7 @@ command = {
         ("\\since" ~ cmd_since ~ newline) |
         ("\\skipto" ~ cmd_skipto ~ newline) |
         ("\\snippet" ~ cmd_snippet ~ newline) |
+        ("\\span" ~ SPACE_SEPARATOR* ~ cmd_span) |
         ("\\title" ~ SPACE_SEPARATOR* ~ cmd_title ~ newline) |
         ("\\tt" ~ WHITE_SPACE* ~ cmd_tt) |
         ("\\tableofcontents" ~ cmd_tableofcontents ~ newline) |

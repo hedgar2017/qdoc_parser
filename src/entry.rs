@@ -7,6 +7,7 @@ use std::{collections::HashMap, fmt};
 #[derive(Debug)]
 pub struct QDocEnum {
     pub name: String,
+    pub description: String,
     pub data: HashMap<String, String>,
 }
 
@@ -87,6 +88,7 @@ impl fmt::Display for QDocEntry {
             Variable(ref value) => writeln!(f, "Variable: {}", value),
             Enum(ref value) => {
                 writeln!(f, "Enum: {}", value.name);
+                writeln!(f, "Description: {}", value.description);
                 for (key, description) in value.data.iter() {
                     writeln!(f, "      {}: {}", key, description);
                 }

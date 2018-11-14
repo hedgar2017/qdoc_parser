@@ -139,20 +139,20 @@
 
     \keyword some keyword
 
-    \fn void function() const volatile
-
     \param param1 some param stuff
     \param param2 another param stuff
     
     QWidgetBackingStoreTracker is a thin wrapper around a \a QWidgetBackingStore pointer,
     which maintains a list of the \b {QWidgets} which are currently using the backing
     store.  This list is modified via the \underline{registerWidget} and unregisterWidget functions.
+
+    \fn void function() const volatile
  */
  // a single line comment
    /* a
    multiline
      one */
-QWidgetBackingStoreTracker::QWidgetBackingStoreTracker() {}
+function1() {}
 
 /*!
     \enum TheEnum
@@ -169,6 +169,27 @@ QWidgetBackingStoreTracker::QWidgetBackingStoreTracker() {}
 
     \value BottomLeftCorner
     
-    \value BottomRightCorner    
+    \value BottomRightCorner
 */
-enum TheEnum {}
+function2() {}
+
+/*!
+    \l {https://github.com/emoon/qdoc_parser/issues/1} {Issue 1}
+
+    \enum QWidget::RenderFlag
+
+    This enum describes how to render the widget when calling QWidget::render().
+
+    \value DrawWindowBackground If you enable this option, the widget's background
+    is rendered into the target even if autoFillBackground is not set. By default,
+    this option is enabled.
+
+    \value DrawChildren If you enable this option, the widget's children
+    are rendered recursively into the target. By default, this option is enabled.
+
+    \value IgnoreMask If you enable this option, the widget's QWidget::mask()
+    is ignored when rendering into the target. By default, this option is disabled.
+
+    \since 4.3
+*/
+function3() {}
