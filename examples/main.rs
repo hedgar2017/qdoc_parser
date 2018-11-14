@@ -24,20 +24,16 @@ fn main() {
         }
     };
 
-    let info = QDocParser::new(filter).parse_files(vec![
-        env::args()
-            .collect::<Vec<String>>()
-            .get(1)
-            .unwrap_or(&"cpp/example.cpp".to_owned()),
-    ]);
+    let files = if let Some(file_arg) = env::args().collect::<Vec<String>>().get(1) {
+        vec![file_arg.to_owned()]
+    } else {
+        vec!["cpp/example.cpp".to_owned()]
+    };
 
-    for (path, result) in info {
-        match result {
-            Ok(file) => {
-                eprintln!("OK    {}", path);
-                println!("{}", file);
-            }
-            Err(error) => eprintln!("ERROR {}\n{}", path, error.to_string()),
-        }
+    let info = QDocParser::new(filter).parse_files(&files);
+
+    for (path, file_data) in info {
+        eprintln!("{}", path);
+        println!("{}", file_data);
     }
 }

@@ -11,8 +11,8 @@ extern crate failure;
 extern crate percent_encoding;
 extern crate walkdir;
 
-use walkdir::{WalkDir, DirEntry};
 use std::path::PathBuf;
+use walkdir::{DirEntry, WalkDir};
 
 use std::{collections::HashMap, fs};
 
@@ -21,7 +21,7 @@ use pest::{iterators::Pair, Parser};
 use rayon::prelude::*;
 
 pub use entry::{QDocEntry, QDocEnum, QDocItem};
-pub use file::QDocFile as QDocFile;
+pub use file::QDocFile;
 
 use error::Error;
 
@@ -50,10 +50,11 @@ fn is_private_file(entry: &walkdir::DirEntry) -> bool {
 }
 
 fn is_cpp(entry: &DirEntry) -> bool {
-    entry.file_name()
-         .to_str()
-         .map(|s| s.ends_with(".cpp"))
-         .unwrap_or(false)
+    entry
+        .file_name()
+        .to_str()
+        .map(|s| s.ends_with(".cpp") || s.ends_with("qnamespace.qdoc"))
+        .unwrap_or(false)
 }
 ///
 /// Function for adding files/paths to process
@@ -74,7 +75,6 @@ fn add_process_path(dest: &mut Vec<PathBuf>, path: &str) {
     }
 }
 
-
 impl<F> QDocParser<F>
 where
     F: Send + Sync + Fn(&str, QDocFilterable) -> String,
@@ -94,22 +94,23 @@ where
     /// To allow the user to translate them if needed.
     /// If the user returns None the parser should output the data as is.
     ///
-    pub fn parse_files(&self, paths: &[&str]) -> HashMap<String, QDocFile> {
+    pub fn parse_files(&self, paths: &[String]) -> HashMap<String, QDocFile> {
         let mut files: Vec<PathBuf> = Vec::new();
 
         for p in paths {
             add_process_path(&mut files, p);
         }
 
-       files 
+        files
             .par_iter()
             .map(|path| {
-            	let p = path.to_owned().into_os_string().into_string().unwrap();
-            	(p.to_owned(), self.parse_file(&p).unwrap()) 
+                let p = path.to_owned().into_os_string().into_string().unwrap();
+                (p.to_owned(), self.parse_file(&p).unwrap())
             }).collect::<HashMap<String, QDocFile>>()
     }
 
     fn parse_file(&self, path: &str) -> QDocResult {
+        println!("Doc parsing {}", path);
         let data = fs::read_to_string(path)?;
         let data = match data.chars().last() {
             None => return Ok(QDocFile(Vec::new())),

@@ -38,19 +38,19 @@ fn main() {
         }
     };
 
-    let info = QDocParser::new(filter).parse_files(vec![
-        env::args()
-            .collect::<Vec<String>>()
-            .get(1)
-            .unwrap_or(&"cpp/example.cpp".to_owned()),
-    ]);
+    let files = if let Some(file_arg) = env::args().collect::<Vec<String>>().get(1) {
+        vec![file_arg.to_owned()]
+    } else {
+        vec!["cpp/example.cpp".to_owned()]
+    };
+
+    let info = QDocParser::new(filter).parse_files(&files);
 
     let mut file_count = 0;
 
-    for (_path, result) in info {
+    for (_path, t) in info {
         let mut func_count = 0;
 
-        let t = result.unwrap();
         let target_name = format!("data/dummy_crate/src/file_{}.rs", file_count);
         let mut target = BufWriter::new(File::create(target_name).unwrap());
 
