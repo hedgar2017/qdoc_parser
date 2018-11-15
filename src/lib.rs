@@ -173,7 +173,7 @@ where
                     .into_inner()
                     .next()
                     .expect(&format!("\\a word next() panic: {}", command_text));
-                let data = format!("**{}**", word.as_span().as_str().trim());
+                let data = format!("*{}*", word.as_span().as_str().trim());
                 return Some(data);
             }
             Rule::cmd_b | Rule::cmd_gui | Rule::cmd_underline => {
@@ -292,21 +292,23 @@ where
                 return Some(data);
             }
             Rule::cmd_li | Rule::cmd_o => {
-                entry.rustdoc_elements.push(format!("*"));
+                let mut data = Vec::new();
+                data.push(format!("*"));
                 for element in command.into_inner() {
                     match element.as_rule() {
-                        Rule::doc_word => entry
-                            .rustdoc_elements
-                            .push(element.as_span().as_str().trim().to_owned()),
+                        Rule::doc_word => data.push(element.as_span().as_str().trim().to_owned()),
                         Rule::command => {
                             let command =
                                 element.into_inner().next().expect("command next() panic");
-                            self.process_element(command, entry);
+                            if let Some(text) = self.process_element(command, entry) {
+                                data.push(text);
+                            }
                         }
                         _ => (),
                     }
                 }
-                entry.rustdoc_elements.push(format!("\n"));
+                data.push(format!("\n"));
+                return Some(data.join(" "));
             }
             Rule::cmd_macos => {
                 return Some("MacOS".to_string());
@@ -331,10 +333,11 @@ where
             }
             Rule::cmd_return => return Some(format!("**Returns**")),
             Rule::cmd_sa => {
-                entry.rustdoc_elements.push(format!("**See also:**"));
+                let mut data = Vec::new();
+                data.push(format!("**See also:**"));
                 for part in command.into_inner() {
                     if let Rule::sa_link = part.as_rule() {
-                        entry.rustdoc_elements.push(format!(
+                        data.push(format!(
                             "{}\n",
                             (self.filter)(
                                 part.as_span().as_str().trim(),
@@ -343,6 +346,7 @@ where
                         ));
                     }
                 }
+                return Some(data.join(" "));
             }
             Rule::cmd_section1 => return Some(format!("# {}\n", command.as_span().as_str().trim())),
             Rule::cmd_section2 => return Some(format!("## {}\n", command.as_span().as_str().trim())),
